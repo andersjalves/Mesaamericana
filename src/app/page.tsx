@@ -1,0 +1,808 @@
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
+import { supabase } from '@/lib/supabase';
+import { LOGOS_PLATAFORMAS } from '@/data/mesas';
+
+export interface MesaProprietaria {
+  id: string;
+  nome: string;
+  logo: string;
+  desconto: string;
+  cupom: string;
+  link_afiliado: string;
+  destaque: boolean;
+  drawdown: string;
+  profit_split: string;
+  avaliacao: string;
+  cor_tag: string;
+  plataformas: string[];
+  ordem?: number;
+}
+
+// Postagens para o Carrossel do Instagram
+const POSTS_INSTAGRAM = [
+  {
+    id: 1,
+    tag: 'GESTÃO DE RISCO',
+    titulo: 'Diferença entre Drawdowns',
+    descricao: 'Entenda como funciona o Trailing Drawdown vs End of Day (EOD) antes de assinar.',
+    imagem: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&auto=format&fit=crop&q=80',
+    link: 'https://www.instagram.com/traderfunding_mesausa/'
+  },
+  {
+    id: 2,
+    tag: 'OFERTAS & CUPONS',
+    titulo: 'Até 90% OFF na Apex Trader Funding',
+    descricao: 'Aproveite os maiores descontos ativos do mês usando o cupom oficial ANDMP.',
+    imagem: 'https://images.unsplash.com/photo-1642543492481-44e81e3914a7?w=800&auto=format&fit=crop&q=80',
+    link: 'https://www.instagram.com/traderfunding_mesausa/'
+  },
+  {
+    id: 3,
+    tag: 'REGRAS & PAYOUT',
+    titulo: 'Como aprovar na sua primeira tentativa',
+    descricao: 'Dicas fundamentais de gerenciamento e limites de contratos para evitar estouro da conta.',
+    imagem: 'https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?w=800&auto=format&fit=crop&q=80',
+    link: 'https://www.instagram.com/traderfunding_mesausa/'
+  }
+];
+
+export default function Home() {
+  const [mesas, setMesas] = useState<MesaProprietaria[]>([]);
+  const [carregando, setCarregando] = useState(true);
+  const [busca, setBusca] = useState('');
+  const [copiado, setCopiado] = useState<string | null>(null);
+
+  // Carrossel Instagram State
+  const [slideAtual, setSlideAtual] = useState(0);
+
+  // Refs de Containers de Widgets
+
+  // Chat IA State
+  const [chatAberto, setChatAberto] = useState(false);
+  const [mensagens, setMensagens] = useState<Array<{ autor: 'user' | 'ia'; texto: string }>>([
+    {
+      autor: 'ia',
+      texto: 'Olá! Sou o Assistente IA especializado em Mesas Proprietárias Americanas. Como posso te ajudar hoje? Selecione uma dúvida abaixo ou digite sua pergunta.'
+    }
+  ]);
+  const [inputChat, setInputChat] = useState('');
+  const [enviandoIa, setEnviandoIa] = useState(false);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    async function buscarMesas() {
+      setCarregando(true);
+      const { data, error } = await supabase.from('mesas').select('*').order('ordem', { ascending: true });
+      if (error) {
+        const { data: fallbackData } = await supabase.from('mesas').select('*');
+        if (fallbackData) setMesas(fallbackData as MesaProprietaria[]);
+      } else if (data) {
+        setMesas(data as MesaProprietaria[]);
+      }
+      setCarregando(false);
+    }
+    buscarMesas();
+  }, []);
+
+  useEffect(() => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [mensagens, enviandoIa]);
+
+  const proximoSlide = () => {
+    setSlideAtual((prev) => (prev + 1) % POSTS_INSTAGRAM.length);
+  };
+
+  const slideAnterior = () => {
+    setSlideAtual((prev) => (prev - 1 + POSTS_INSTAGRAM.length) % POSTS_INSTAGRAM.length);
+  };
+
+  const copiarCupom = (cupom: string, id: string) => {
+    if (cupom.toLowerCase().includes('sem cupom')) return;
+    navigator.clipboard.writeText(cupom);
+    setCopiado(id);
+    setTimeout(() => setCopiado(null), 2000);
+  };
+
+  const mesasFiltradas = mesas.filter((mesa) =>
+    mesa.nome.toLowerCase().includes(busca.toLowerCase()) ||
+    mesa.cupom.toLowerCase().includes(busca.toLowerCase()) ||
+    mesa.drawdown.toLowerCase().includes(busca.toLowerCase()) ||
+    (mesa.plataformas && mesa.plataformas.some((p) => p.toLowerCase().includes(busca.toLowerCase())))
+  );
+
+  const processarPergunta = (perguntaTexto: string) => {
+    if (!perguntaTexto.trim() || enviandoIa) return;
+
+    const msgUsuario = perguntaTexto;
+    setInputChat('');
+    setMensagens((prev) => [...prev, { autor: 'user', texto: msgUsuario }]);
+    setEnviandoIa(true);
+
+    const text = msgUsuario.toLowerCase();
+    let resposta = "Posso te ajudar com regras de avaliação, escolha de plataformas (NinjaTrader, Tradovate, Rithmic, BlackArrow) e cupons ativos. Qual mesa você quer analisar?";
+
+    if (text.includes('apex')) {
+      resposta = "A Apex Trader Funding é uma das maiores mesas dos EUA. Oferece até 90% de desconto com o cupom ANDMP. Possui drawdown do tipo Trailing (em tempo real) e repasse de 100% dos primeiros $25.000 de lucro. Funciona via NinjaTrader e Tradovate.";
+    } else if (text.includes('drawdown') || text.includes('perda') || text.includes('limite')) {
+      resposta = "Existem 3 tipos principais de Drawdown:\n1. Trailing: Sobe junto com o lucro em tempo real (ex: Apex, Bulenox).\n2. EOD (End of Day): Atualizado apenas ao final do dia operacional (ex: Tradeify, MFF).\n3. Estático: O limite não sobe à medida que você lucra, ficando fixo.";
+    } else if (text.includes('cupom') || text.includes('desconto') || text.includes('codigo')) {
+      resposta = "Cupons ativos no momento:\n• Apex Trader Funding: ANDMP\n• My Funded Futures: AND5\n• Earn2Trade: ANDER\n• Tradeify & LVL: ANDMP";
+    } else if (text.includes('payout') || text.includes('saque') || text.includes('receber')) {
+      resposta = "A maioria das mesas permite saques quinzenais ou mensais. Mesas como Apex e MFF repassam 100% dos primeiros lucros ($12.500 a $25.000) e depois mantêm o repasse em 90%.";
+    } else if (text.includes('plataforma') || text.includes('ninja') || text.includes('blackarrow')) {
+      resposta = "Para operadoras brasileiras via BlackArrow, recomendamos LVL Funding e Ylos. Se preferir NinjaTrader ou Tradovate no navegador/celular, Apex e My Funded Futures são excelentes opções.";
+    }
+
+    setTimeout(() => {
+      setMensagens((prev) => [...prev, { autor: 'ia', texto: resposta }]);
+      setEnviandoIa(false);
+    }, 500);
+  };
+
+  return (
+    <div className="min-h-screen bg-[#0B0F17] text-slate-100 font-sans antialiased selection:bg-emerald-500 selection:text-slate-950">
+      {/* HEADER */}
+      <header className="border-b border-slate-800/80 bg-[#0B0F17]/80 backdrop-blur-md sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center font-black text-slate-950 text-xl">
+              M
+            </div>
+            <span className="text-lg sm:text-xl font-black tracking-tight text-white">
+              MESA PROP <span className="text-emerald-400 font-light">AMERICANA</span>
+            </span>
+          </div>
+
+          <nav className="hidden md:flex items-center space-x-8 text-sm font-medium text-slate-400">
+            <a href="#promocoes" className="hover:text-emerald-400 transition">Promoções</a>
+            <a href="#parcerias" className="hover:text-emerald-400 transition">Parcerias Oficial</a>
+            <a href="#comparativo" className="hover:text-emerald-400 transition">Comparativo</a>
+            <a href="#noticias" className="hover:text-emerald-400 transition">Notícias & Calendário</a>
+            <a href="#conteudo" className="hover:text-emerald-400 transition">Vídeos & Instagram</a>
+          </nav>
+
+          <a
+            href="https://t.me/MesasAmericana"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition flex items-center gap-2 shadow-lg shadow-emerald-500/10"
+          >
+            <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+              <path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm5.56 8.16l-2.02 9.52c-.15.68-.55.85-1.12.53l-3.08-2.27-1.48 1.43c-.16.16-.3.3-.62.3l.22-3.14 5.72-5.17c.25-.22-.05-.34-.38-.12l-7.07 4.45-3.04-.95c-.66-.21-.67-.66.14-.98l11.89-4.58c.55-.2 1.03.13.84.98z"/>
+            </svg>
+            <span className="hidden sm:inline">Grupo Telegram</span>
+            <span className="sm:hidden">Telegram</span>
+          </a>
+        </div>
+      </header>
+
+      {/* HERO SECTION */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-10 text-center">
+        <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full text-xs font-semibold uppercase tracking-wider mb-4">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          Cupons & Regras Atualizadas
+        </div>
+        <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight mb-4 leading-tight">
+          As Melhores Ofertas em <br className="hidden sm:block" />
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400">
+            Mesas Proprietárias de Futuros
+          </span>
+        </h1>
+        <p className="text-slate-400 max-w-2xl mx-auto text-sm sm:text-base mb-6 leading-relaxed">
+          Compare plataformas, regras de drawdown e economize na compra de suas avaliações com cupons verificados.
+        </p>
+
+        {/* BARRA DE PESQUISA */}
+        <div className="max-w-lg mx-auto relative">
+          <input
+            type="text"
+            placeholder="Pesquisar mesa, cupom, plataforma ou drawdown..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className="w-full bg-slate-900/90 border border-slate-800 rounded-2xl px-5 py-3.5 pl-12 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition shadow-inner"
+          />
+          <svg className="w-5 h-5 text-slate-500 absolute left-4 top-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+      </section>
+
+      {/* GRID DE CARDS */}
+      <section id="promocoes" className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
+            <span>🔥</span> Cupons & Ofertas Ativas
+          </h2>
+          <span className="text-xs text-slate-500 font-mono">
+            {carregando ? 'Carregando...' : `${mesasFiltradas.length} mesas encontradas`}
+          </span>
+        </div>
+
+        {carregando ? (
+          <div className="text-center py-12 text-slate-500 text-sm">Buscando dados atualizados...</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {mesasFiltradas.map((mesa) => (
+              <CardMesa key={mesa.id} mesa={mesa} copiado={copiado} onCopiar={copiarCupom} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* TABELA COMPARATIVA */}
+      <section id="comparativo" className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
+        <div className="mb-6">
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            <span>📊</span> Tabela Comparativa de Regras
+          </h2>
+          <p className="text-xs text-slate-400 mt-1">
+            Visualização simplificada de plataformas suportadas, tipo de drawdown e descontos vigentes.
+          </p>
+        </div>
+
+        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm">
+          <div className="overflow-x-auto w-full">
+            <table className="w-full text-left text-sm text-slate-300 min-w-[920px]">
+              <thead className="bg-slate-950/80 text-slate-400 uppercase text-[11px] font-semibold tracking-wider border-b border-slate-800">
+                <tr>
+                  <th className="p-4 pl-6 w-[200px]">Mesa Proprietária</th>
+                  <th className="p-4 w-[140px]">Desconto</th>
+                  <th className="p-4">Plataformas</th>
+                  <th className="p-4 w-[160px]">Tipo de Drawdown</th>
+                  <th className="p-4 w-[120px]">Cupom</th>
+                  <th className="p-4 text-right pr-6 w-[150px]">Ação</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60">
+                {mesasFiltradas.map((m) => (
+                  <tr key={m.id} className="hover:bg-slate-800/40 transition group">
+                    <td className="p-4 pl-6 font-bold text-slate-100">
+                      <div className="flex items-center gap-3 whitespace-nowrap">
+                        <LogoImage src={m.logo} alt={m.nome} className="w-8 h-8 rounded-lg bg-slate-950 p-1 border border-slate-800 flex-shrink-0" />
+                        <span className="font-semibold text-slate-100">{m.nome}</span>
+                      </div>
+                    </td>
+                    <td className="p-4 whitespace-nowrap">
+                      <span className="font-extrabold text-emerald-400">{m.desconto}</span>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex flex-wrap gap-1.5 max-w-[320px]">
+                        {m.plataformas && m.plataformas.length > 0 ? (
+                          m.plataformas.map((plat, idx) => {
+                            const logoPlat = LOGOS_PLATAFORMAS[plat];
+                            return (
+                              <span
+                                key={idx}
+                                className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-md bg-slate-950 text-slate-200 border border-slate-800 font-medium whitespace-nowrap shadow-sm"
+                              >
+                                {logoPlat && (
+                                  <img
+                                    src={logoPlat}
+                                    alt={plat}
+                                    className="w-3.5 h-3.5 rounded-sm object-contain"
+                                    onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                                  />
+                                )}
+                                {plat}
+                              </span>
+                            );
+                          })
+                        ) : (
+                          <span className="text-xs text-slate-500">Futures</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-4 whitespace-nowrap">
+                      <span className="inline-block px-2.5 py-1 rounded-md text-xs font-medium bg-slate-800/80 text-slate-200 border border-slate-700/50">
+                        {m.drawdown}
+                      </span>
+                    </td>
+                    <td className="p-4 whitespace-nowrap">
+                      <code className="bg-slate-950 px-2.5 py-1 rounded text-xs font-mono text-emerald-400 border border-slate-800">
+                        {m.cupom}
+                      </code>
+                    </td>
+                    <td className="p-4 text-right pr-6 whitespace-nowrap">
+                      <a
+                        href={m.link_afiliado}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-3.5 py-2 rounded-xl transition shadow-sm"
+                      >
+                        Acessar Site
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* SEÇÃO 50/50: CALENDÁRIO ECONÔMICO + FEED DE NOTÍCIAS EM TEMPO REAL */}
+      <section id="noticias" className="max-w-7xl mx-auto px-4 sm:px-6 py-10 border-t border-slate-800/60">
+        <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              <span>⚡</span> Central de Notícias e Indicadores em Tempo Real
+            </h2>
+            <p className="text-xs text-slate-400 mt-1">
+              Calendário Econômico com filtros dos EUA (2 e 3 estrelas) e feed instantâneo de breaking news.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <a
+              href="https://br.investing.com/economic-calendar"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 text-xs font-semibold text-emerald-400 transition flex items-center gap-1.5"
+            >
+              Abrir no Investing ↗
+            </a>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Lado Esquerdo: Calendário Econômico do Mercado (EUA + 2 e 3 Estrelas) */}
+          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col h-[520px] shadow-xl">
+            <div className="flex items-center justify-between mb-3 border-b border-slate-800 pb-2">
+              <span className="text-xs font-bold text-slate-200 flex items-center gap-2">
+                📅 Calendário Econômico (EUA - Relevância Média/Alta)
+              </span>
+              <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                AO VIVO
+              </span>
+            </div>
+            <div className="flex-1 w-full rounded-xl overflow-hidden bg-slate-950 border border-slate-800">
+              <iframe
+                src="https://sslecal2.investing.com/?defaultFont=%23000000&innerBorderColor=%23e5e7eb&columns=exc_flags,exc_currency,exc_importance,exc_actual,exc_forecast,exc_previous&features=datepicker,timezone&countries=5&calType=week&timeZone=12&lang=12&importance=2,3"
+                width="100%"
+                height="100%"
+                frameBorder="0"
+                allowTransparency={true}
+                title="Calendário Econômico EUA - Investing.com"
+              ></iframe>
+            </div>
+          </div>
+
+          {/* Lado Direito: Live Market News Feed (Tempo Real Ativo) */}
+          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col h-[520px] shadow-xl">
+            <div className="flex items-center justify-between mb-3 border-b border-slate-800 pb-2">
+              <span className="text-xs font-bold text-slate-200 flex items-center gap-2">
+                📢 Feed de Notícias Mercado Futuros EUA
+              </span>
+              <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                LIVE BREAKING NEWS
+              </span>
+            </div>
+            <div className="flex-1 w-full rounded-xl overflow-hidden bg-slate-950 border border-slate-800">
+              <iframe
+                src="https://feed.financialjuice.com/widgets/headlines.aspx?wtype=NEWS&mode=Dark&width=100%25&height=100%25&backC=0f172a&fontC=e2e8f0&affurl="
+                width="100%"
+                height="100%"
+                frameBorder="0"
+                scrolling="yes"
+                title="Feed de Notícias em Tempo Real - Financial Juice"
+              ></iframe>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SEÇÃO: CONTEÚDOS & MÍDIAS (COM CARROSSEL DO INSTAGRAM) */}
+      <section id="conteudo" className="max-w-7xl mx-auto px-4 sm:px-6 py-10 border-t border-slate-800/60">
+        <div className="mb-6">
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            <span>📺</span> Mídias & Redes Oficiais
+          </h2>
+          <p className="text-xs text-slate-400 mt-1">
+            Assista à live explicativa e acompanhe nosso carrossel oficial do Instagram.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Card 1: Vídeo da Live */}
+          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between shadow-xl">
+            <div>
+              <div className="aspect-video w-full rounded-xl overflow-hidden bg-slate-950 mb-3 border border-slate-800">
+                <iframe
+                  className="w-full h-full"
+                  src="https://www.youtube.com/embed/PJj3DLT9J1w"
+                  title="Explicando como funcionam as Mesas Proprietarias"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                ></iframe>
+              </div>
+              <h3 className="font-bold text-sm text-slate-100">Explicando Mesas Proprietárias</h3>
+              <p className="text-xs text-slate-400 mt-1">Assista diretamente aqui sobre regras, aprovação e payout no mercado americano.</p>
+            </div>
+            <a
+              href="https://www.youtube.com/@BolsaAmericana"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 block text-center bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl py-2.5 text-xs transition shadow-lg shadow-red-600/20"
+            >
+              Acessar Canal do YouTube
+            </a>
+          </div>
+
+          {/* Card 2: Playlist de Aulas */}
+          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between shadow-xl">
+            <div>
+              <div className="aspect-video w-full rounded-xl overflow-hidden bg-slate-950 mb-3 border border-slate-800">
+                <iframe
+                  className="w-full h-full"
+                  src="https://www.youtube.com/embed/videoseries?list=PL7fT4LKG0FB-_UAs4p2lomtMlc9eYFhl_"
+                  title="Playlist Configuração de Plataformas"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                ></iframe>
+              </div>
+              <h3 className="font-bold text-sm text-slate-100">Configuração de Plataformas</h3>
+              <p className="text-xs text-slate-400 mt-1">Aulas práticas de NinjaTrader, Tradovate, BlackArrow e Rithmic.</p>
+            </div>
+            <a
+              href="https://youtube.com/playlist?list=PL7fT4LKG0FB-_UAs4p2lomtMlc9eYFhl_&si=bPCutvdns5410Q9W"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 block text-center bg-slate-800 hover:bg-slate-700 text-slate-100 font-bold rounded-xl py-2.5 text-xs transition border border-slate-700"
+            >
+              Ver Playlist de Aulas
+            </a>
+          </div>
+
+          {/* Card 3: CARROSSEL INTERATIVO DO INSTAGRAM */}
+          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between shadow-xl">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
+                    📸
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-xs text-slate-100">Instagram Oficial</h3>
+                    <a
+                      href="https://www.instagram.com/traderfunding_mesausa/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] text-emerald-400 font-mono hover:underline"
+                    >
+                      @traderfunding_mesausa
+                    </a>
+                  </div>
+                </div>
+
+                {/* Controles de Navegação do Carrossel */}
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={slideAnterior}
+                    aria-label="Anterior"
+                    className="p-1 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-lg text-slate-300 transition"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={proximoSlide}
+                    aria-label="Próximo"
+                    className="p-1 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-lg text-slate-300 transition"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* CARD DO CARROSSEL */}
+              <div className="relative rounded-xl overflow-hidden bg-slate-950 border border-slate-800 group">
+                <div className="aspect-video w-full relative overflow-hidden">
+                  <img
+                    src={POSTS_INSTAGRAM[slideAtual].imagem}
+                    alt={POSTS_INSTAGRAM[slideAtual].titulo}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent"></div>
+                  <span className="absolute top-2.5 left-2.5 px-2.5 py-1 bg-emerald-500 text-slate-950 font-black text-[10px] rounded-md tracking-wider">
+                    {POSTS_INSTAGRAM[slideAtual].tag}
+                  </span>
+                </div>
+
+                <div className="p-3.5 pt-2">
+                  <h4 className="font-bold text-sm text-slate-100 leading-snug">
+                    {POSTS_INSTAGRAM[slideAtual].titulo}
+                  </h4>
+                  <p className="text-xs text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+                    {POSTS_INSTAGRAM[slideAtual].descricao}
+                  </p>
+                </div>
+
+                {/* INDICADORES DO CARROSSEL */}
+                <div className="flex justify-center gap-1.5 pb-3">
+                  {POSTS_INSTAGRAM.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setSlideAtual(idx)}
+                      className={`h-1.5 rounded-full transition-all ${
+                        idx === slideAtual ? 'w-5 bg-emerald-400' : 'w-1.5 bg-slate-700'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <a
+              href="https://www.instagram.com/traderfunding_mesausa/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 block text-center bg-gradient-to-r from-amber-500 via-rose-500 to-purple-600 text-white font-bold rounded-xl py-2.5 text-xs transition shadow-md hover:opacity-95"
+            >
+              Ver perfil no Instagram
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* SEÇÃO: PARCERIAS OFICIAIS NINJATRADER & KINETICK */}
+      <section id="parcerias" className="max-w-7xl mx-auto px-4 sm:px-6 py-10 border-t border-slate-800/60">
+        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-sm">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="space-y-2 text-center md:text-left">
+              <span className="text-[10px] font-bold text-emerald-400 tracking-wider uppercase bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-md">
+                Eco-sistema Oficial de Dados
+              </span>
+              <h3 className="text-lg font-bold text-slate-100">
+                Integração Avançada NinjaTrader & Kinetick
+              </h3>
+              <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
+                As principais mesas proprietárias americanas utilizam a tecnologia da plataforma NinjaTrader para execução de ordens e o feed de dados Kinetick para cotações em tempo real sem atrasos.
+              </p>
+            </div>
+            <div className="flex items-center gap-4 flex-wrap justify-center">
+              <a
+                href="https://ninjatraderdomesticvendor.sjv.io/4G4WBn"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-slate-950 border border-slate-800 hover:border-emerald-500/50 px-4 py-3 rounded-xl flex items-center gap-3 transition"
+              >
+                <img src="https://ninjatrader.com/favicon.ico" alt="NinjaTrader Logo" className="w-6 h-6 object-contain" />
+                <div className="text-left">
+                  <span className="text-xs font-bold block text-slate-100">NinjaTrader</span>
+                  <span className="text-[10px] text-slate-500">Plataforma Recomendada</span>
+                </div>
+              </a>
+              <a
+                href="https://ninjatraderdomesticvendor.sjv.io/4G4WBn"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-slate-950 border border-slate-800 hover:border-emerald-500/50 px-4 py-3 rounded-xl flex items-center gap-3 transition"
+              >
+                <div className="w-6 h-6 rounded bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold text-xs">
+                  K
+                </div>
+                <div className="text-left">
+                  <span className="text-xs font-bold block text-slate-100">Kinetick Data</span>
+                  <span className="text-[10px] text-slate-500">Real-Time Market Data</span>
+                </div>
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CHAT IA INTELIGENTE */}
+      <div className="fixed bottom-6 right-6 z-50">
+        {!chatAberto ? (
+          <button
+            onClick={() => setChatAberto(true)}
+            className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 p-3.5 rounded-2xl shadow-2xl font-bold flex items-center gap-2 transition hover:scale-105"
+          >
+            <span className="text-xl">🤖</span>
+            <span className="text-xs font-black hidden sm:inline">Dúvidas de Mesas? Assistente IA</span>
+          </button>
+        ) : (
+          <div className="bg-slate-900 border border-slate-800 w-[330px] sm:w-[380px] h-[480px] rounded-2xl shadow-2xl flex flex-col overflow-hidden backdrop-blur-xl">
+            <div className="bg-slate-950 p-3.5 border-b border-slate-800 flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span className="text-xs font-bold text-slate-100">Assistente de Mesas Americanas</span>
+              </div>
+              <button
+                onClick={() => setChatAberto(false)}
+                className="text-slate-400 hover:text-white text-xs px-2 py-1 bg-slate-800 rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-2 bg-slate-950/60 border-b border-slate-800/80 flex gap-1.5 overflow-x-auto text-[10px]">
+              <button
+                onClick={() => processarPergunta('Qual cupom usar na Apex?')}
+                className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2 py-1 rounded-lg whitespace-nowrap border border-slate-700/50"
+              >
+                🏷️ Cupons Apex
+              </button>
+              <button
+                onClick={() => processarPergunta('Como funciona o Drawdown Trailing vs EOD?')}
+                className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2 py-1 rounded-lg whitespace-nowrap border border-slate-700/50"
+              >
+                📊 Drawdowns
+              </button>
+              <button
+                onClick={() => processarPergunta('Como funcionam os saques e payouts?')}
+                className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2 py-1 rounded-lg whitespace-nowrap border border-slate-700/50"
+              >
+                💰 Payout & Saques
+              </button>
+            </div>
+
+            <div ref={chatScrollRef} className="flex-1 p-3 overflow-y-auto space-y-3 text-xs">
+              {mensagens.map((m, index) => (
+                <div
+                  key={index}
+                  className={`p-3 rounded-xl max-w-[85%] leading-relaxed whitespace-pre-line ${
+                    m.autor === 'user'
+                      ? 'bg-emerald-500 text-slate-950 font-medium ml-auto rounded-br-none'
+                      : 'bg-slate-950 text-slate-200 border border-slate-800 rounded-bl-none'
+                  }`}
+                >
+                  {m.texto}
+                </div>
+              ))}
+              {enviandoIa && (
+                <div className="bg-slate-950 text-slate-400 p-2.5 rounded-xl border border-slate-800 w-fit text-[11px] animate-pulse">
+                  Analisando regras...
+                </div>
+              )}
+            </div>
+
+            <div className="p-2.5 bg-slate-950 border-t border-slate-800 flex gap-2">
+              <input
+                type="text"
+                placeholder="Pergunte sobre cupons, regras ou plataformas..."
+                value={inputChat}
+                onChange={(e) => setInputChat(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && processarPergunta(inputChat)}
+                className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500"
+              />
+              <button
+                onClick={() => processarPergunta(inputChat)}
+                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3 py-2 rounded-xl font-bold text-xs"
+              >
+                Enviar
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* FOOTER & DECLARAÇÃO DE RISCO */}
+      <footer className="border-t border-slate-800/80 bg-slate-950 py-10 text-slate-400 text-xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-6">
+          <div className="space-y-4 text-slate-400 leading-relaxed border-b border-slate-800/80 pb-6 text-[11px]">
+            <h4 className="text-slate-200 font-bold text-xs uppercase tracking-wide">Declaração de Risco</h4>
+            <p>
+              Negociar futuros e forex traz riscos substanciais e não é para todos os investidores. Um investidor pode perder todo ou mais o investimento inicial. Capital de risco é dinheiro que pode ser perdido sem comprometer a segurança financeira ou o estilo de vida da pessoa. Somente capital de risco deve ser usado para negociação, e somente aqueles com capital de risco suficiente devem considerar a negociação. Resultados passados não são necessariamente indicativos de resultados futuros.
+            </p>
+
+            <h5 className="text-slate-300 font-semibold text-[11px] pt-2">Divulgação de desempenho hipotético</h5>
+            <p>
+              Os resultados de desempenho hipotéticos têm muitas limitações inerentes, algumas das quais são descritas abaixo. nenhuma representação está sendo feita de que qualquer conta terá ou provavelmente obterá lucros ou perdas semelhantes aos mostrados; na verdade, frequentemente existem diferenças acentuadas entre os resultados de desempenho hipotéticos e os resultados reais subsequentemente alcançados por qualquer programa de negociação específico. Uma das limitações dos resultados de desempenho hipotéticos é que eles geralmente são preparados com o benefício da retrospectiva. Além disso, a negociação hipotética não envolve risco financeiro e nenhum registro de negociação hipotética pode explicar completamente o impacto do risco financeiro da negociação real. por exemplo, a capacidade de suportar perdas ou de aderir a um determinado programa de negociação, apesar das perdas comerciais, são pontos materiais que também podem afetar adversamente os resultados comerciais reais. Existem inúmeros outros fatores relacionados aos mercados em geral ou à implementação de qualquer programa de negociação específico que não pode ser totalmente contabilizado na preparação de resultados de desempenho hipotéticos e todos podem afetar adversamente os resultados de negociação.
+            </p>
+
+            <h5 className="text-slate-300 font-semibold text-[11px] pt-2">Divulgação de depoimentos</h5>
+            <p>
+              Divulgação de depoimentos: Os depoimentos que aparecem neste site são de nossos clientes mas não são uma garantia de desempenho ou sucesso futuro.
+            </p>
+
+            <h5 className="text-slate-300 font-semibold text-[11px] pt-2">Risck Disclosure</h5>
+            <p>
+              Futures and forex trading contains substantial risk and is not for every investor. An investor could potentially lose all or more than the initial investment. Risk capital is money that can be lost without jeopardizing ones’ financial security or lifestyle. Only risk capital should be used for trading and only those with sufficient risk capital should consider trading. Past performance is not necessarily indicative of future results.
+            </p>
+
+            <h5 className="text-slate-300 font-semibold text-[11px] pt-2">Hypothetical Risk Disclosure</h5>
+            <p>
+              Hypothetical performance results have many inherent limitations, some of which are described below. No representation is being made that any account will or is likely to achieve profits or losses similar to those shown; in fact, there are frequently sharp differences between hypothetical performance results and the actual results subsequently achieved by any particular trading program. One of the limitations of hypothetical performance results is that they are generally prepared with the benefit of hindsight. In addition, hypothetical trading does not involve financial risk, and no hypothetical trading record can completely account for the impact of financial risk of actual trading. for example, the ability to withstand losses or to adhere to a particular trading program in spite of trading losses are material points which can also adversely affect actual trading results. There are numerous other factors related to the markets in general or to the implementation of any specific trading program which cannot be fully accounted for in the preparation of hypothetical performance results and all which can adversely affect trading results.
+            </p>
+          </div>
+
+          <div className="text-center text-slate-500 text-xs">
+            © {new Date().getFullYear()} Mesa Prop Americana - Todos os direitos reservados.
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+function CardMesa({ mesa, copiado, onCopiar }: { mesa: MesaProprietaria; copiado: string | null; onCopiar: (c: string, id: string) => void }) {
+  return (
+    <div className="bg-slate-900/80 border border-slate-800 hover:border-slate-700/80 rounded-2xl p-6 flex flex-col justify-between transition-all duration-200 hover:shadow-xl hover:shadow-emerald-500/5 group">
+      <div>
+        <div className="flex justify-between items-start mb-4">
+          <div className="flex items-center gap-3">
+            <LogoImage src={mesa.logo} alt={mesa.nome} className="w-12 h-12 rounded-xl bg-slate-950 p-2 border border-slate-800/80 group-hover:border-slate-700" />
+            <div>
+              <h3 className="font-bold text-base text-slate-100 group-hover:text-emerald-400 transition">{mesa.nome}</h3>
+              <span className={`inline-block text-[10px] px-2 py-0.5 rounded border mt-1 font-semibold ${mesa.cor_tag}`}>
+                {mesa.avaliacao}
+              </span>
+            </div>
+          </div>
+          <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-extrabold text-xs px-2.5 py-1 rounded-lg">
+            {mesa.desconto}
+          </span>
+        </div>
+
+        <div className="space-y-2 text-xs text-slate-400 my-5 bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/60">
+          <div className="flex justify-between items-center">
+            <span className="text-slate-500">Drawdown:</span>
+            <span className="text-slate-200 font-semibold">{mesa.drawdown}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-slate-500">Profit Split:</span>
+            <span className="text-slate-200 font-semibold">{mesa.profit_split}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-3 pt-2">
+        <div className="flex items-center justify-between bg-slate-950 border border-dashed border-slate-800 rounded-xl p-2.5">
+          <div className="pl-2">
+            <span className="text-[10px] text-slate-500 block uppercase font-medium">Cupom de Desconto</span>
+            <span className="font-mono font-bold text-emerald-400 tracking-wider text-sm">{mesa.cupom}</span>
+          </div>
+          <button
+            onClick={() => onCopiar(mesa.cupom, mesa.id)}
+            disabled={mesa.cupom.toLowerCase().includes('sem cupom')}
+            className="bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-xs text-slate-200 font-semibold px-3.5 py-2 rounded-lg transition"
+          >
+            {copiado === mesa.id ? '✓ Copiado!' : mesa.cupom.toLowerCase().includes('sem cupom') ? 'Sem Cupom' : 'Copiar'}
+          </button>
+        </div>
+
+        <a
+          href={mesa.link_afiliado}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block text-center w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold py-3 rounded-xl text-sm transition shadow-lg shadow-emerald-500/10"
+        >
+          Aproveitar Oferta
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function LogoImage({ src, alt, className }: { src: string; alt: string; className: string }) {
+  const [erro, setErro] = useState(false);
+
+  if (erro) {
+    return (
+      <div className={`${className} flex items-center justify-center font-bold text-emerald-400 text-xs bg-slate-900 border border-slate-800`}>
+        {alt.slice(0, 2).toUpperCase()}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={className}
+      onError={() => setErro(true)}
+    />
+  );
+}
