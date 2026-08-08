@@ -20,6 +20,43 @@ export interface MesaProprietaria {
   ordem?: number;
 }
 
+export interface Campanha {
+  id: string;
+  titulo?: string;
+  descricao?: string;
+  imagem?: string;
+  imagem_url?: string;
+  banner?: string;
+  link?: string;
+  link_direcionamento?: string;
+  cor_destaque?: string;
+  ativo?: boolean;
+  ativa?: boolean;
+  data_fim?: string;
+  criado_em?: string;
+}
+
+// Helper robusto para extrair URL limpa e exata mesmo com duplicações ou Markdown do Supabase
+function extrairUrlLimpa(linkBruto?: string): string {
+  if (!linkBruto) return '#';
+  
+  let link = linkBruto.trim();
+
+  // Se contiver Markdown no formato [texto](url) ou parênteses isolados
+  const matchMarkdown = link.match(/\((https?:\/\/[^\)]+)\)/);
+  if (matchMarkdown && matchMarkdown[1]) {
+    return matchMarkdown[1].trim();
+  }
+
+  // Se houver múltiplas URLs concatenadas, extrai a última URL válida iniciada por http(s)
+  const urlsEncontradas = link.match(/https?:\/\/[^\s"'>]+/g);
+  if (urlsEncontradas && urlsEncontradas.length > 0) {
+    return urlsEncontradas[urlsEncontradas.length - 1].replace(/\]$/, '').trim();
+  }
+
+  return link;
+}
+
 // Postagens para o Carrossel do Instagram
 const POSTS_INSTAGRAM = [
   {
@@ -50,14 +87,19 @@ const POSTS_INSTAGRAM = [
 
 export default function Home() {
   const [mesas, setMesas] = useState<MesaProprietaria[]>([]);
+  const [campanhas, setCampanhas] = useState<Campanha[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [busca, setBusca] = useState('');
   const [copiado, setCopiado] = useState<string | null>(null);
 
+  // Estado do Idioma
+  const [idioma, setIdioma] = useState<'PT' | 'EN' | 'ES'>('PT');
+
+  // Estado do Modal Lightbox
+  const [imagemExpandida, setImagemExpandida] = useState<{ url: string; titulo: string } | null>(null);
+
   // Carrossel Instagram State
   const [slideAtual, setSlideAtual] = useState(0);
-
-  // Refs de Containers de Widgets
 
   // Chat IA State
   const [chatAberto, setChatAberto] = useState(false);
@@ -72,18 +114,46 @@ export default function Home() {
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    async function buscarMesas() {
+    async function buscarDados() {
       setCarregando(true);
-      const { data, error } = await supabase.from('mesas').select('*').order('ordem', { ascending: true });
-      if (error) {
+      
+      // Busca mesas
+      const { data: dataMesas, error: errorMesas } = await supabase
+        .from('mesas')
+        .select('*')
+        .order('ordem', { ascending: true });
+
+      if (errorMesas) {
         const { data: fallbackData } = await supabase.from('mesas').select('*');
         if (fallbackData) setMesas(fallbackData as MesaProprietaria[]);
-      } else if (data) {
-        setMesas(data as MesaProprietaria[]);
+      } else if (dataMesas) {
+        setMesas(dataMesas as MesaProprietaria[]);
       }
+
+      // Busca campanhas
+      const { data: dataCampanhas, error: errorCampanhas } = await supabase
+        .from('campanhas')
+        .select('*');
+
+      if (!errorCampanhas && dataCampanhas) {
+        // Aceita ativo === true ou ativa === true ou campos indefinidos
+        const campanhasValidas = dataCampanhas.filter((c: any) => c.ativo !== false && c.ativa !== false);
+        setCampanhas(campanhasValidas as Campanha[]);
+      }
+
       setCarregando(false);
     }
-    buscarMesas();
+
+    buscarDados();
+  }, []);
+
+  // Fechar lightbox com tecla ESC
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setImagemExpandida(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   useEffect(() => {
@@ -158,6 +228,7 @@ export default function Home() {
           </div>
 
           <nav className="hidden md:flex items-center space-x-8 text-sm font-medium text-slate-400">
+            <a href="#campanhas" className="hover:text-emerald-400 transition">Campanhas</a>
             <a href="#promocoes" className="hover:text-emerald-400 transition">Promoções</a>
             <a href="#parcerias" className="hover:text-emerald-400 transition">Parcerias Oficial</a>
             <a href="#comparativo" className="hover:text-emerald-400 transition">Comparativo</a>
@@ -165,23 +236,57 @@ export default function Home() {
             <a href="#conteudo" className="hover:text-emerald-400 transition">Vídeos & Instagram</a>
           </nav>
 
-          <a
-            href="https://t.me/MesasAmericana"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition flex items-center gap-2 shadow-lg shadow-emerald-500/10"
-          >
-            <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-              <path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm5.56 8.16l-2.02 9.52c-.15.68-.55.85-1.12.53l-3.08-2.27-1.48 1.43c-.16.16-.3.3-.62.3l.22-3.14 5.72-5.17c.25-.22-.05-.34-.38-.12l-7.07 4.45-3.04-.95c-.66-.21-.67-.66.14-.98l11.89-4.58c.55-.2 1.03.13.84.98z"/>
-            </svg>
-            <span className="hidden sm:inline">Grupo Telegram</span>
-            <span className="sm:hidden">Telegram</span>
-          </a>
+          <div className="flex items-center gap-3">
+            {/* SELETOR DE IDIOMA DA ÁREA NÃO LOGADA */}
+            <div className="relative inline-flex items-center bg-slate-900 border border-slate-800 rounded-xl p-1 text-xs">
+              <button
+                onClick={() => setIdioma('PT')}
+                className={`px-2 py-1 rounded-lg font-bold transition ${idioma === 'PT' ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                title="Português"
+              >
+                🇧🇷 PT
+              </button>
+              <button
+                onClick={() => setIdioma('EN')}
+                className={`px-2 py-1 rounded-lg font-bold transition ${idioma === 'EN' ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                title="English"
+              >
+                🇺🇸 EN
+              </button>
+              <button
+                onClick={() => setIdioma('ES')}
+                className={`px-2 py-1 rounded-lg font-bold transition ${idioma === 'ES' ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                title="Español"
+              >
+                🇪🇸 ES
+              </button>
+            </div>
+
+            <a
+              href="/login"
+              className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3.5 py-2 rounded-xl font-bold text-xs sm:text-sm transition"
+            >
+              Área do Trader
+            </a>
+
+            <a
+              href="https://t.me/MesasAmericana"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition flex items-center gap-2 shadow-lg shadow-emerald-500/10"
+            >
+              <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                <path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm5.56 8.16l-2.02 9.52c-.15.68-.55.85-1.12.53l-3.08-2.27-1.48 1.43c-.16.16-.3.3-.62.3l.22-3.14 5.72-5.17c.25-.22-.05-.34-.38-.12l-7.07 4.45-3.04-.95c-.66-.21-.67-.66.14-.98l11.89-4.58c.55-.2 1.03.13.84.98z"/>
+              </svg>
+              <span className="hidden sm:inline">Grupo Telegram</span>
+              <span className="sm:hidden">Telegram</span>
+            </a>
+          </div>
         </div>
       </header>
 
       {/* HERO SECTION */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-10 text-center">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-8 text-center">
         <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full text-xs font-semibold uppercase tracking-wider mb-4">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
           Cupons & Regras Atualizadas
@@ -189,7 +294,7 @@ export default function Home() {
         <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight mb-4 leading-tight">
           As Melhores Ofertas em <br className="hidden sm:block" />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400">
-            Mesas Proprietárias de Futuros
+            Mesas Proprietárias Americana de Futuros 
           </span>
         </h1>
         <p className="text-slate-400 max-w-2xl mx-auto text-sm sm:text-base mb-6 leading-relaxed">
@@ -211,8 +316,34 @@ export default function Home() {
         </div>
       </section>
 
-      {/* GRID DE CARDS */}
-      <section id="promocoes" className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+      {/* SEÇÃO 1 (TOPO): CAMPANHAS & EVENTOS ESPECIAIS */}
+      {campanhas.length > 0 && (
+        <section id="campanhas" className="max-w-7xl mx-auto px-4 sm:px-6 py-6 border-b border-slate-800/60">
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold flex items-center gap-2 text-white">
+                <span>🚀</span> Campanhas & Eventos Especiais
+              </h2>
+              <p className="text-xs text-slate-400 mt-1">
+                Acompanhe os principais lançamentos, pass-throughs e promoções por tempo limitado.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {campanhas.map((campanha) => (
+              <CardCampanha
+                key={campanha.id}
+                campanha={campanha}
+                onExpandirImagem={(url, titulo) => setImagemExpandida({ url, titulo })}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* SEÇÃO 2: GRID DE MESAS E CUPONS */}
+      <section id="promocoes" className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
             <span>🔥</span> Cupons & Ofertas Ativas
@@ -234,7 +365,7 @@ export default function Home() {
       </section>
 
       {/* TABELA COMPARATIVA */}
-      <section id="comparativo" className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
+      <section id="comparativo" className="max-w-7xl mx-auto px-4 sm:px-6 py-10 border-t border-slate-800/60">
         <div className="mb-6">
           <h2 className="text-xl font-bold flex items-center gap-2">
             <span>📊</span> Tabela Comparativa de Regras
@@ -351,7 +482,6 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Lado Esquerdo: Calendário Econômico do Mercado (EUA + 2 e 3 Estrelas) */}
           <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col h-[520px] shadow-xl">
             <div className="flex items-center justify-between mb-3 border-b border-slate-800 pb-2">
               <span className="text-xs font-bold text-slate-200 flex items-center gap-2">
@@ -374,7 +504,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Lado Direito: Live Market News Feed (Tempo Real Ativo) */}
           <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col h-[520px] shadow-xl">
             <div className="flex items-center justify-between mb-3 border-b border-slate-800 pb-2">
               <span className="text-xs font-bold text-slate-200 flex items-center gap-2">
@@ -411,7 +540,6 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Card 1: Vídeo da Live */}
           <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between shadow-xl">
             <div>
               <div className="aspect-video w-full rounded-xl overflow-hidden bg-slate-950 mb-3 border border-slate-800">
@@ -436,7 +564,6 @@ export default function Home() {
             </a>
           </div>
 
-          {/* Card 2: Playlist de Aulas */}
           <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between shadow-xl">
             <div>
               <div className="aspect-video w-full rounded-xl overflow-hidden bg-slate-950 mb-3 border border-slate-800">
@@ -461,7 +588,6 @@ export default function Home() {
             </a>
           </div>
 
-          {/* Card 3: CARROSSEL INTERATIVO DO INSTAGRAM */}
           <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between shadow-xl">
             <div>
               <div className="flex items-center justify-between mb-3">
@@ -482,7 +608,6 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Controles de Navegação do Carrossel */}
                 <div className="flex items-center gap-1">
                   <button
                     onClick={slideAnterior}
@@ -505,7 +630,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* CARD DO CARROSSEL */}
               <div className="relative rounded-xl overflow-hidden bg-slate-950 border border-slate-800 group">
                 <div className="aspect-video w-full relative overflow-hidden">
                   <img
@@ -528,7 +652,6 @@ export default function Home() {
                   </p>
                 </div>
 
-                {/* INDICADORES DO CARROSSEL */}
                 <div className="flex justify-center gap-1.5 pb-3">
                   {POSTS_INSTAGRAM.map((_, idx) => (
                     <button
@@ -688,6 +811,43 @@ export default function Home() {
         )}
       </div>
 
+      {/* MODAL LIGHTBOX ESTILO TELEGRAM */}
+      {imagemExpandida && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 sm:p-8 animate-fadeIn"
+          onClick={() => setImagemExpandida(null)}
+        >
+          <div
+            className="relative max-w-5xl max-h-[90vh] flex flex-col items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Botão Fechar */}
+            <button
+              onClick={() => setImagemExpandida(null)}
+              className="absolute -top-10 right-0 sm:-right-8 text-slate-400 hover:text-white bg-slate-900/80 p-2 rounded-full border border-slate-800 transition"
+              title="Fechar (Esc)"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Imagem Expandida */}
+            <img
+              src={imagemExpandida.url}
+              alt={imagemExpandida.titulo}
+              className="max-w-full max-h-[80vh] object-contain rounded-xl shadow-2xl border border-slate-800"
+            />
+
+            {imagemExpandida.titulo && (
+              <p className="text-slate-300 text-xs sm:text-sm mt-3 font-semibold text-center bg-slate-950/80 px-4 py-1.5 rounded-lg border border-slate-800">
+                {imagemExpandida.titulo}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* FOOTER & DECLARAÇÃO DE RISCO */}
       <footer className="border-t border-slate-800/80 bg-slate-950 py-10 text-slate-400 text-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-6">
@@ -699,7 +859,7 @@ export default function Home() {
 
             <h5 className="text-slate-300 font-semibold text-[11px] pt-2">Divulgação de desempenho hipotético</h5>
             <p>
-              Os resultados de desempenho hipotéticos têm muitas limitações inerentes, algumas das quais são descritas abaixo. nenhuma representação está sendo feita de que qualquer conta terá ou provavelmente obterá lucros ou perdas semelhantes aos mostrados; na verdade, frequentemente existem diferenças acentuadas entre os resultados de desempenho hipotéticos e os resultados reais subsequentemente alcançados por qualquer programa de negociação específico. Uma das limitações dos resultados de desempenho hipotéticos é que eles geralmente são preparados com o benefício da retrospectiva. Além disso, a negociação hipotética não envolve risco financeiro e nenhum registro de negociação hipotética pode explicar completamente o impacto do risco financeiro da negociação real. por exemplo, a capacidade de suportar perdas ou de aderir a um determinado programa de negociação, apesar das perdas comerciais, são pontos materiais que também podem afetar adversamente os resultados comerciais reais. Existem inúmeros outros fatores relacionados aos mercados em geral ou à implementação de qualquer programa de negociação específico que não pode ser totalmente contabilizado na preparação de resultados de desempenho hipotéticos e todos podem afetar adversamente os resultados de negociação.
+              Os resultados de desempenho hipotéticos têm muitas limitações inerentes, algumas das quais são descritas abaixo. nenhuma representação está sendo feita de que qualquer conta terá ou provavelmente obterá lucros ou perdas semelhantes aos mostrados; na verdade, frequentemente existem diferenças acentuadas entre os resultados de desempenho hipotéticos e os resultados reais subsequentemente alcançados por qualquer programa de negociação específico. Uma das limitações dos resultados de desempenho hipotéticos é que eles geralmente são preparados com o benefício da retrospectiva. Além disso, a negociação hipotética não envolve risco financeiro e nenhum registro de negociação hipotética pode explicar completamente o impacto do risco financial da negociação real. por exemplo, a capacidade de suportar perdas ou de aderir a um determinado programa de negociação, apesar das perdas comerciais, são pontos materiais que também podem afetar adversamente os resultados comerciais reais. Existem inúmeros outros fatores relacionados aos mercados em geral ou à implementação de qualquer programa de negociação específico que não pode ser totalmente contabilizado na preparação de resultados de desempenho hipotéticos e todos podem afetar adversamente os resultados de negociação.
             </p>
 
             <h5 className="text-slate-300 font-semibold text-[11px] pt-2">Divulgação de depoimentos</h5>
@@ -724,6 +884,87 @@ export default function Home() {
         </div>
       </footer>
     </div>
+  );
+}
+
+function CardCampanha({ campanha, onExpandirImagem }: { campanha: Campanha; onExpandirImagem: (url: string, titulo: string) => void }) {
+  // Mapeia imagem e link considerando os nomes exatos do seu Supabase
+  const urlImagem = campanha.imagem_url || campanha.imagem || campanha.banner;
+  const urlLink = extrairUrlLimpa(campanha.link_direcionamento || campanha.link);
+
+  return (
+    <div className="bg-slate-900/80 border border-slate-800 hover:border-slate-700/80 rounded-2xl overflow-hidden flex flex-col justify-between transition-all duration-200 hover:shadow-xl hover:shadow-emerald-500/5 group">
+      <div>
+        {/* Banner com a proporção original da imagem (sem cortar) */}
+        <div className="w-full relative bg-slate-950 border-b border-slate-800 flex items-center justify-center overflow-hidden">
+          <CampanhaImage 
+            src={urlImagem} 
+            alt={campanha.titulo || 'Campanha'} 
+            onExpandir={() => urlImagem && onExpandirImagem(urlImagem, campanha.titulo || '')}
+          />
+          {campanha.cor_destaque && (
+            <span
+              className="absolute top-3 left-3 text-slate-950 font-black text-[10px] px-2.5 py-1 rounded-md tracking-wider uppercase z-10 shadow-md pointer-events-none"
+              style={{ backgroundColor: campanha.cor_destaque }}
+            >
+              Destaque
+            </span>
+          )}
+        </div>
+
+        {campanha.titulo && (
+          <div className="p-5">
+            <h3 className="font-bold text-base text-slate-100 group-hover:text-emerald-400 transition">
+              {campanha.titulo}
+            </h3>
+            {campanha.descricao && (
+              <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                {campanha.descricao}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="p-5 pt-3">
+        <a
+          href={urlLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block text-center w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3 rounded-xl text-xs transition shadow-lg shadow-emerald-500/10"
+        >
+          Saiba Mais / Acessar
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function CampanhaImage({ src, alt, onExpandir }: { src?: string; alt: string; onExpandir: () => void }) {
+  const [erro, setErro] = useState(!src);
+
+  useEffect(() => {
+    setErro(!src);
+  }, [src]);
+
+  if (erro || !src) {
+    return (
+      <div className="w-full h-48 flex flex-col items-center justify-center bg-slate-950/80 p-4 text-center">
+        <span className="text-2xl mb-1">📢</span>
+        <span className="text-[11px] font-semibold text-slate-500">{alt}</span>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      onClick={onExpandir}
+      title="Clique para ampliar"
+      className="w-full h-auto max-h-[380px] object-contain cursor-zoom-in transition-transform duration-500 group-hover:scale-102"
+      onError={() => setErro(true)}
+    />
   );
 }
 
