@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { LOGOS_PLATAFORMAS } from '@/data/mesas';
 
@@ -36,19 +37,185 @@ export interface Campanha {
   criado_em?: string;
 }
 
-// Helper robusto para extrair URL limpa e exata mesmo com duplicações ou Markdown do Supabase
+// Dicionário de Traduções
+const TRANSLATIONS = {
+  PT: {
+    navCampanhas: 'Campanhas',
+    navPromocoes: 'Promoções',
+    navParcerias: 'Parcerias Oficial',
+    navComparativo: 'Comparativo',
+    navNoticias: 'Notícias & Calendário',
+    navConteudo: 'Vídeos & Instagram',
+    areaTrader: 'Área do Trader',
+    grupoTelegram: 'Grupo Telegram',
+    badgeHero: 'Cupons & Regras Atualizadas',
+    tituloHero: 'As Melhores Ofertas em',
+    subtituloHero: 'Mesas Proprietárias Americana de Futuros',
+    descHero: 'Compare plataformas, regras de drawdown e economize na compra de suas avaliações com cupons verificados.',
+    placeholderBusca: 'Pesquisar mesa, cupom, plataforma ou drawdown...',
+    tituloCampanhas: 'Campanhas & Eventos Especiais',
+    descCampanhas: 'Acompanhe os principais lançamentos, pass-throughs e promoções por tempo limitado.',
+    tituloCupons: 'Cupons & Ofertas Ativas',
+    mesasEncontradas: 'mesas encontradas',
+    carregando: 'Carregando...',
+    buscandoDados: 'Buscando dados atualizados...',
+    tituloComparativo: 'Tabela Comparativa de Regras',
+    descComparativo: 'Visualização simplificada de plataformas suportadas, tipo de drawdown e descontos vigentes.',
+    thMesa: 'Mesa Proprietária',
+    thDesconto: 'Desconto',
+    thPlataformas: 'Plataformas',
+    thDrawdown: 'Tipo de Drawdown',
+    thCupom: 'Cupom',
+    thAcao: 'Ação',
+    btnAcessarSite: 'Acessar Site',
+    tituloNoticias: 'Central de Notícias e Indicadores em Tempo Real',
+    descNoticias: 'Calendário Econômico com filtros dos EUA (2 e 3 estrelas) e feed instantâneo de breaking news.',
+    abrirInvesting: 'Abrir no Investing ↗',
+    calEconomico: 'Calendário Econômico (EUA - Relevância Média/Alta)',
+    aoVivo: 'AO VIVO',
+    feedNoticias: 'Feed de Notícias Mercado Futuros EUA',
+    tituloMidias: 'Mídias & Redes Oficiais',
+    descMidias: 'Assista à live explicativa e acompanhe nosso carrossel oficial do Instagram.',
+    btnYoutube: 'Acessar Canal do YouTube',
+    btnPlaylist: 'Ver Playlist de Aulas',
+    btnInstagram: 'Ver perfil no Instagram',
+    tituloParcerias: 'Integração Avançada NinjaTrader & Kinetick',
+    descParcerias: 'As principais mesas proprietárias americanas utilizam a tecnologia da plataforma NinjaTrader para execução de ordens e o feed de dados Kinetick para cotações em tempo real sem atrasos.',
+    assistenteIa: 'Dúvidas de Mesas? Assistente IA',
+    duvidasCupom: '🏷️ Cupons Apex',
+    duvidasDrawdown: '📊 Drawdowns',
+    duvidasPayout: '💰 Payout & Saques',
+    btnEnviar: 'Enviar',
+    placeholderChat: 'Pergunte sobre cupons, regras ou plataformas...',
+    cupomDesconto: 'Cupom de Desconto',
+    copiar: 'Copiar',
+    copiado: '✓ Copiado!',
+    semCupom: 'Sem Cupom',
+    aproveitarOferta: 'Aproveitar Oferta',
+    saibaMais: 'Saiba Mais / Acessar',
+  },
+  EN: {
+    navCampanhas: 'Campaigns',
+    navPromocoes: 'Deals',
+    navParcerias: 'Official Partners',
+    navComparativo: 'Comparison',
+    navNoticias: 'News & Calendar',
+    navConteudo: 'Videos & Instagram',
+    areaTrader: 'Trader Area',
+    grupoTelegram: 'Telegram Group',
+    badgeHero: 'Updated Coupons & Rules',
+    tituloHero: 'The Best Offers in',
+    subtituloHero: 'US Futures Prop Firms',
+    descHero: 'Compare platforms, drawdown rules, and save on evaluation accounts with verified coupons.',
+    placeholderBusca: 'Search prop firm, coupon, platform or drawdown...',
+    tituloCampanhas: 'Campaigns & Special Events',
+    descCampanhas: 'Track major launches, pass-throughs, and limited-time promotions.',
+    tituloCupons: 'Active Coupons & Deals',
+    mesasEncontradas: 'firms found',
+    carregando: 'Loading...',
+    buscandoDados: 'Fetching updated data...',
+    tituloComparativo: 'Rules Comparison Table',
+    descComparativo: 'Simplified overview of supported platforms, drawdown types, and active discounts.',
+    thMesa: 'Prop Firm',
+    thDesconto: 'Discount',
+    thPlataformas: 'Platforms',
+    thDrawdown: 'Drawdown Type',
+    thCupom: 'Coupon',
+    thAcao: 'Action',
+    btnAcessarSite: 'Visit Website',
+    tituloNoticias: 'Real-Time News & Economic Hub',
+    descNoticias: 'US Economic Calendar (2 & 3 stars) and instant breaking news feed.',
+    abrirInvesting: 'Open in Investing ↗',
+    calEconomico: 'Economic Calendar (US - Med/High Impact)',
+    aoVivo: 'LIVE',
+    feedNoticias: 'US Futures Market News Feed',
+    tituloMidias: 'Official Media & Networks',
+    descMidias: 'Watch our explanatory streams and follow our official Instagram carousel.',
+    btnYoutube: 'Visit YouTube Channel',
+    btnPlaylist: 'View Video Playlist',
+    btnInstagram: 'View Instagram Profile',
+    tituloParcerias: 'Advanced NinjaTrader & Kinetick Integration',
+    descParcerias: 'Leading US prop firms rely on NinjaTrader technology for order execution and Kinetick data feed for real-time market data.',
+    assistenteIa: 'Prop Firm Questions? AI Assistant',
+    duvidasCupom: '🏷️ Apex Coupons',
+    duvidasDrawdown: '📊 Drawdowns',
+    duvidasPayout: '💰 Payout & Withdrawals',
+    btnEnviar: 'Send',
+    placeholderChat: 'Ask about coupons, rules, or platforms...',
+    cupomDesconto: 'Discount Coupon',
+    copiar: 'Copy',
+    copiado: '✓ Copied!',
+    semCupom: 'No Coupon',
+    aproveitarOferta: 'Get Offer',
+    saibaMais: 'Learn More / Visit',
+  },
+  ES: {
+    navCampanhas: 'Campañas',
+    navPromocoes: 'Promociones',
+    navParcerias: 'Socios Oficiales',
+    navComparativo: 'Comparativa',
+    navNoticias: 'Noticias y Calendario',
+    navConteudo: 'Videos e Instagram',
+    areaTrader: 'Área del Trader',
+    grupoTelegram: 'Grupo de Telegram',
+    badgeHero: 'Cupones y Reglas Actualizadas',
+    tituloHero: 'Las Mejores Ofertas en',
+    subtituloHero: 'Empresas de Fondeo Americanas de Futuros',
+    descHero: 'Compara plataformas, reglas de drawdown y ahorra en tus evaluaciones con cupones verificados.',
+    placeholderBusca: 'Buscar empresa, cupón, plataforma o drawdown...',
+    tituloCampanhas: 'Campañas y Eventos Especiales',
+    descCampanhas: 'Sigue los principales lanzamientos, promociones y ofertas por tiempo limitado.',
+    tituloCupons: 'Cupones y Ofertas Activas',
+    mesasEncontradas: 'empresas encontradas',
+    carregando: 'Cargando...',
+    buscandoDados: 'Buscando datos actualizados...',
+    tituloComparativo: 'Tabla Comparativa de Reglas',
+    descComparativo: 'Vista simplificada de plataformas compatibles, tipos de drawdown y descuentos vigentes.',
+    thMesa: 'Empresa de Fondeo',
+    thDesconto: 'Descuento',
+    thPlataformas: 'Plataformas',
+    thDrawdown: 'Tipo de Drawdown',
+    thCupom: 'Cupón',
+    thAcao: 'Acción',
+    btnAcessarSite: 'Visitar Sitio',
+    tituloNoticias: 'Central de Noticias e Indicadores en Tiempo Real',
+    descNoticias: 'Calendario Económico de EE. UU. (2 y 3 estrellas) y feed de noticias de última hora.',
+    abrirInvesting: 'Abrir en Investing ↗',
+    calEconomico: 'Calendario Económico (EE. UU. - Impacto Medio/Alto)',
+    aoVivo: 'EN VIVO',
+    feedNoticias: 'Feed de Noticias Mercado de Futuros EE. UU.',
+    tituloMidias: 'Medios y Redes Oficiales',
+    descMidias: 'Mira nuestros videos explicativos y sigue nuestro carrusel oficial en Instagram.',
+    btnYoutube: 'Ir al Canal de YouTube',
+    btnPlaylist: 'Ver Playlist de Clases',
+    btnInstagram: 'Ver Perfil en Instagram',
+    tituloParcerias: 'Integración Avanzada NinjaTrader y Kinetick',
+    descParcerias: 'Las principales empresas de fondeo americanas utilizan la tecnología de NinjaTrader para la ejecución de órdenes y el feed de datos Kinetick para cotizaciones en tiempo real.',
+    assistenteIa: '¿Dudas de Fondeo? Asistente IA',
+    duvidasCupom: '🏷️ Cupones Apex',
+    duvidasDrawdown: '📊 Drawdowns',
+    duvidasPayout: '💰 Payout y Retiros',
+    btnEnviar: 'Enviar',
+    placeholderChat: 'Pregunta sobre cupones, reglas o plataformas...',
+    cupomDesconto: 'Cupón de Descuento',
+    copiar: 'Copiar',
+    copiado: '✓ ¡Copiado!',
+    semCupom: 'Sin Cupón',
+    aproveitarOferta: 'Aprovechar Oferta',
+    saibaMais: 'Saber Más / Acceder',
+  }
+};
+
 function extrairUrlLimpa(linkBruto?: string): string {
   if (!linkBruto) return '#';
   
   let link = linkBruto.trim();
 
-  // Se contiver Markdown no formato [texto](url) ou parênteses isolados
   const matchMarkdown = link.match(/\((https?:\/\/[^\)]+)\)/);
   if (matchMarkdown && matchMarkdown[1]) {
     return matchMarkdown[1].trim();
   }
 
-  // Se houver múltiplas URLs concatenadas, extrai a última URL válida iniciada por http(s)
   const urlsEncontradas = link.match(/https?:\/\/[^\s"'>]+/g);
   if (urlsEncontradas && urlsEncontradas.length > 0) {
     return urlsEncontradas[urlsEncontradas.length - 1].replace(/\]$/, '').trim();
@@ -57,7 +224,6 @@ function extrairUrlLimpa(linkBruto?: string): string {
   return link;
 }
 
-// Postagens para o Carrossel do Instagram
 const POSTS_INSTAGRAM = [
   {
     id: 1,
@@ -94,6 +260,7 @@ export default function Home() {
 
   // Estado do Idioma
   const [idioma, setIdioma] = useState<'PT' | 'EN' | 'ES'>('PT');
+  const t = TRANSLATIONS[idioma];
 
   // Estado do Modal Lightbox
   const [imagemExpandida, setImagemExpandida] = useState<{ url: string; titulo: string } | null>(null);
@@ -117,7 +284,6 @@ export default function Home() {
     async function buscarDados() {
       setCarregando(true);
       
-      // Busca mesas
       const { data: dataMesas, error: errorMesas } = await supabase
         .from('mesas')
         .select('*')
@@ -130,13 +296,11 @@ export default function Home() {
         setMesas(dataMesas as MesaProprietaria[]);
       }
 
-      // Busca campanhas
       const { data: dataCampanhas, error: errorCampanhas } = await supabase
         .from('campanhas')
         .select('*');
 
       if (!errorCampanhas && dataCampanhas) {
-        // Aceita ativo === true ou ativa === true ou campos indefinidos
         const campanhasValidas = dataCampanhas.filter((c: any) => c.ativo !== false && c.ativa !== false);
         setCampanhas(campanhasValidas as Campanha[]);
       }
@@ -147,7 +311,6 @@ export default function Home() {
     buscarDados();
   }, []);
 
-  // Fechar lightbox com tecla ESC
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setImagemExpandida(null);
@@ -228,12 +391,12 @@ export default function Home() {
           </div>
 
           <nav className="hidden md:flex items-center space-x-8 text-sm font-medium text-slate-400">
-            <a href="#campanhas" className="hover:text-emerald-400 transition">Campanhas</a>
-            <a href="#promocoes" className="hover:text-emerald-400 transition">Promoções</a>
-            <a href="#parcerias" className="hover:text-emerald-400 transition">Parcerias Oficial</a>
-            <a href="#comparativo" className="hover:text-emerald-400 transition">Comparativo</a>
-            <a href="#noticias" className="hover:text-emerald-400 transition">Notícias & Calendário</a>
-            <a href="#conteudo" className="hover:text-emerald-400 transition">Vídeos & Instagram</a>
+            <a href="#campanhas" className="hover:text-emerald-400 transition">{t.navCampanhas}</a>
+            <a href="#promocoes" className="hover:text-emerald-400 transition">{t.navPromocoes}</a>
+            <a href="#parcerias" className="hover:text-emerald-400 transition">{t.navParcerias}</a>
+            <a href="#comparativo" className="hover:text-emerald-400 transition">{t.navComparativo}</a>
+            <a href="#noticias" className="hover:text-emerald-400 transition">{t.navNoticias}</a>
+            <a href="#conteudo" className="hover:text-emerald-400 transition">{t.navConteudo}</a>
           </nav>
 
           <div className="flex items-center gap-3">
@@ -266,7 +429,7 @@ export default function Home() {
               href="/login"
               className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3.5 py-2 rounded-xl font-bold text-xs sm:text-sm transition"
             >
-              Área do Trader
+              {t.areaTrader}
             </a>
 
             <a
@@ -278,7 +441,7 @@ export default function Home() {
               <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                 <path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm5.56 8.16l-2.02 9.52c-.15.68-.55.85-1.12.53l-3.08-2.27-1.48 1.43c-.16.16-.3.3-.62.3l.22-3.14 5.72-5.17c.25-.22-.05-.34-.38-.12l-7.07 4.45-3.04-.95c-.66-.21-.67-.66.14-.98l11.89-4.58c.55-.2 1.03.13.84.98z"/>
               </svg>
-              <span className="hidden sm:inline">Grupo Telegram</span>
+              <span className="hidden sm:inline">{t.grupoTelegram}</span>
               <span className="sm:hidden">Telegram</span>
             </a>
           </div>
@@ -289,23 +452,23 @@ export default function Home() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-8 text-center">
         <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full text-xs font-semibold uppercase tracking-wider mb-4">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          Cupons & Regras Atualizadas
+          {t.badgeHero}
         </div>
         <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight mb-4 leading-tight">
-          As Melhores Ofertas em <br className="hidden sm:block" />
+          {t.tituloHero} <br className="hidden sm:block" />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400">
-            Mesas Proprietárias Americana de Futuros 
+            {t.subtituloHero}
           </span>
         </h1>
         <p className="text-slate-400 max-w-2xl mx-auto text-sm sm:text-base mb-6 leading-relaxed">
-          Compare plataformas, regras de drawdown e economize na compra de suas avaliações com cupons verificados.
+          {t.descHero}
         </p>
 
         {/* BARRA DE PESQUISA */}
         <div className="max-w-lg mx-auto relative">
           <input
             type="text"
-            placeholder="Pesquisar mesa, cupom, plataforma ou drawdown..."
+            placeholder={t.placeholderBusca}
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             className="w-full bg-slate-900/90 border border-slate-800 rounded-2xl px-5 py-3.5 pl-12 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition shadow-inner"
@@ -316,16 +479,16 @@ export default function Home() {
         </div>
       </section>
 
-      {/* SEÇÃO 1 (TOPO): CAMPANHAS & EVENTOS ESPECIAIS */}
+      {/* SEÇÃO 1: CAMPANHAS & EVENTOS ESPECIAIS */}
       {campanhas.length > 0 && (
         <section id="campanhas" className="max-w-7xl mx-auto px-4 sm:px-6 py-6 border-b border-slate-800/60">
           <div className="mb-6 flex items-center justify-between">
             <div>
               <h2 className="text-xl font-bold flex items-center gap-2 text-white">
-                <span>🚀</span> Campanhas & Eventos Especiais
+                <span>🚀</span> {t.tituloCampanhas}
               </h2>
               <p className="text-xs text-slate-400 mt-1">
-                Acompanhe os principais lançamentos, pass-throughs e promoções por tempo limitado.
+                {t.descCampanhas}
               </p>
             </div>
           </div>
@@ -336,6 +499,7 @@ export default function Home() {
                 key={campanha.id}
                 campanha={campanha}
                 onExpandirImagem={(url, titulo) => setImagemExpandida({ url, titulo })}
+                t={t}
               />
             ))}
           </div>
@@ -346,19 +510,19 @@ export default function Home() {
       <section id="promocoes" className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
-            <span>🔥</span> Cupons & Ofertas Ativas
+            <span>🔥</span> {t.tituloCupons}
           </h2>
           <span className="text-xs text-slate-500 font-mono">
-            {carregando ? 'Carregando...' : `${mesasFiltradas.length} mesas encontradas`}
+            {carregando ? t.carregando : `${mesasFiltradas.length} ${t.mesasEncontradas}`}
           </span>
         </div>
 
         {carregando ? (
-          <div className="text-center py-12 text-slate-500 text-sm">Buscando dados atualizados...</div>
+          <div className="text-center py-12 text-slate-500 text-sm">{t.buscandoDados}</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {mesasFiltradas.map((mesa) => (
-              <CardMesa key={mesa.id} mesa={mesa} copiado={copiado} onCopiar={copiarCupom} />
+              <CardMesa key={mesa.id} mesa={mesa} copiado={copiado} onCopiar={copiarCupom} t={t} />
             ))}
           </div>
         )}
@@ -368,10 +532,10 @@ export default function Home() {
       <section id="comparativo" className="max-w-7xl mx-auto px-4 sm:px-6 py-10 border-t border-slate-800/60">
         <div className="mb-6">
           <h2 className="text-xl font-bold flex items-center gap-2">
-            <span>📊</span> Tabela Comparativa de Regras
+            <span>📊</span> {t.tituloComparativo}
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Visualização simplificada de plataformas suportadas, tipo de drawdown e descontos vigentes.
+            {t.descComparativo}
           </p>
         </div>
 
@@ -380,12 +544,12 @@ export default function Home() {
             <table className="w-full text-left text-sm text-slate-300 min-w-[920px]">
               <thead className="bg-slate-950/80 text-slate-400 uppercase text-[11px] font-semibold tracking-wider border-b border-slate-800">
                 <tr>
-                  <th className="p-4 pl-6 w-[200px]">Mesa Proprietária</th>
-                  <th className="p-4 w-[140px]">Desconto</th>
-                  <th className="p-4">Plataformas</th>
-                  <th className="p-4 w-[160px]">Tipo de Drawdown</th>
-                  <th className="p-4 w-[120px]">Cupom</th>
-                  <th className="p-4 text-right pr-6 w-[150px]">Ação</th>
+                  <th className="p-4 pl-6 w-[200px]">{t.thMesa}</th>
+                  <th className="p-4 w-[140px]">{t.thDesconto}</th>
+                  <th className="p-4">{t.thPlataformas}</th>
+                  <th className="p-4 w-[160px]">{t.thDrawdown}</th>
+                  <th className="p-4 w-[120px]">{t.thCupom}</th>
+                  <th className="p-4 text-right pr-6 w-[150px]">{t.thAcao}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
@@ -444,7 +608,7 @@ export default function Home() {
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1.5 text-xs bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-3.5 py-2 rounded-xl transition shadow-sm"
                       >
-                        Acessar Site
+                        {t.btnAcessarSite}
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                         </svg>
@@ -463,10 +627,10 @@ export default function Home() {
         <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-bold flex items-center gap-2">
-              <span>⚡</span> Central de Notícias e Indicadores em Tempo Real
+              <span>⚡</span> {t.tituloNoticias}
             </h2>
             <p className="text-xs text-slate-400 mt-1">
-              Calendário Econômico com filtros dos EUA (2 e 3 estrelas) e feed instantâneo de breaking news.
+              {t.descNoticias}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -476,7 +640,7 @@ export default function Home() {
               rel="noopener noreferrer"
               className="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 text-xs font-semibold text-emerald-400 transition flex items-center gap-1.5"
             >
-              Abrir no Investing ↗
+              {t.abrirInvesting}
             </a>
           </div>
         </div>
@@ -485,11 +649,11 @@ export default function Home() {
           <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col h-[520px] shadow-xl">
             <div className="flex items-center justify-between mb-3 border-b border-slate-800 pb-2">
               <span className="text-xs font-bold text-slate-200 flex items-center gap-2">
-                📅 Calendário Econômico (EUA - Relevância Média/Alta)
+                📅 {t.calEconomico}
               </span>
               <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                AO VIVO
+                {t.aoVivo}
               </span>
             </div>
             <div className="flex-1 w-full rounded-xl overflow-hidden bg-slate-950 border border-slate-800">
@@ -507,7 +671,7 @@ export default function Home() {
           <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col h-[520px] shadow-xl">
             <div className="flex items-center justify-between mb-3 border-b border-slate-800 pb-2">
               <span className="text-xs font-bold text-slate-200 flex items-center gap-2">
-                📢 Feed de Notícias Mercado Futuros EUA
+                📢 {t.feedNoticias}
               </span>
               <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -528,14 +692,14 @@ export default function Home() {
         </div>
       </section>
 
-      {/* SEÇÃO: CONTEÚDOS & MÍDIAS (COM CARROSSEL DO INSTAGRAM) */}
+      {/* SEÇÃO: CONTEÚDOS & MÍDIAS */}
       <section id="conteudo" className="max-w-7xl mx-auto px-4 sm:px-6 py-10 border-t border-slate-800/60">
         <div className="mb-6">
           <h2 className="text-xl font-bold flex items-center gap-2">
-            <span>📺</span> Mídias & Redes Oficiais
+            <span>📺</span> {t.tituloMidias}
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Assista à live explicativa e acompanhe nosso carrossel oficial do Instagram.
+            {t.descMidias}
           </p>
         </div>
 
@@ -560,7 +724,7 @@ export default function Home() {
               rel="noopener noreferrer"
               className="mt-4 block text-center bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl py-2.5 text-xs transition shadow-lg shadow-red-600/20"
             >
-              Acessar Canal do YouTube
+              {t.btnYoutube}
             </a>
           </div>
 
@@ -584,7 +748,7 @@ export default function Home() {
               rel="noopener noreferrer"
               className="mt-4 block text-center bg-slate-800 hover:bg-slate-700 text-slate-100 font-bold rounded-xl py-2.5 text-xs transition border border-slate-700"
             >
-              Ver Playlist de Aulas
+              {t.btnPlaylist}
             </a>
           </div>
 
@@ -672,7 +836,7 @@ export default function Home() {
               rel="noopener noreferrer"
               className="mt-4 block text-center bg-gradient-to-r from-amber-500 via-rose-500 to-purple-600 text-white font-bold rounded-xl py-2.5 text-xs transition shadow-md hover:opacity-95"
             >
-              Ver perfil no Instagram
+              {t.btnInstagram}
             </a>
           </div>
         </div>
@@ -687,10 +851,10 @@ export default function Home() {
                 Eco-sistema Oficial de Dados
               </span>
               <h3 className="text-lg font-bold text-slate-100">
-                Integração Avançada NinjaTrader & Kinetick
+                {t.tituloParcerias}
               </h3>
               <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
-                As principais mesas proprietárias americanas utilizam a tecnologia da plataforma NinjaTrader para execução de ordens e o feed de dados Kinetick para cotações em tempo real sem atrasos.
+                {t.descParcerias}
               </p>
             </div>
             <div className="flex items-center gap-4 flex-wrap justify-center">
@@ -733,7 +897,7 @@ export default function Home() {
             className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 p-3.5 rounded-2xl shadow-2xl font-bold flex items-center gap-2 transition hover:scale-105"
           >
             <span className="text-xl">🤖</span>
-            <span className="text-xs font-black hidden sm:inline">Dúvidas de Mesas? Assistente IA</span>
+            <span className="text-xs font-black hidden sm:inline">{t.assistenteIa}</span>
           </button>
         ) : (
           <div className="bg-slate-900 border border-slate-800 w-[330px] sm:w-[380px] h-[480px] rounded-2xl shadow-2xl flex flex-col overflow-hidden backdrop-blur-xl">
@@ -755,19 +919,19 @@ export default function Home() {
                 onClick={() => processarPergunta('Qual cupom usar na Apex?')}
                 className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2 py-1 rounded-lg whitespace-nowrap border border-slate-700/50"
               >
-                🏷️ Cupons Apex
+                {t.duvidasCupom}
               </button>
               <button
                 onClick={() => processarPergunta('Como funciona o Drawdown Trailing vs EOD?')}
                 className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2 py-1 rounded-lg whitespace-nowrap border border-slate-700/50"
               >
-                📊 Drawdowns
+                {t.duvidasDrawdown}
               </button>
               <button
                 onClick={() => processarPergunta('Como funcionam os saques e payouts?')}
                 className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2 py-1 rounded-lg whitespace-nowrap border border-slate-700/50"
               >
-                💰 Payout & Saques
+                {t.duvidasPayout}
               </button>
             </div>
 
@@ -794,7 +958,7 @@ export default function Home() {
             <div className="p-2.5 bg-slate-950 border-t border-slate-800 flex gap-2">
               <input
                 type="text"
-                placeholder="Pergunte sobre cupons, regras ou plataformas..."
+                placeholder={t.placeholderChat}
                 value={inputChat}
                 onChange={(e) => setInputChat(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && processarPergunta(inputChat)}
@@ -804,14 +968,14 @@ export default function Home() {
                 onClick={() => processarPergunta(inputChat)}
                 className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3 py-2 rounded-xl font-bold text-xs"
               >
-                Enviar
+                {t.btnEnviar}
               </button>
             </div>
           </div>
         )}
       </div>
 
-      {/* MODAL LIGHTBOX ESTILO TELEGRAM */}
+      {/* MODAL LIGHTBOX */}
       {imagemExpandida && (
         <div
           className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 sm:p-8 animate-fadeIn"
@@ -821,7 +985,6 @@ export default function Home() {
             className="relative max-w-5xl max-h-[90vh] flex flex-col items-center justify-center"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Botão Fechar */}
             <button
               onClick={() => setImagemExpandida(null)}
               className="absolute -top-10 right-0 sm:-right-8 text-slate-400 hover:text-white bg-slate-900/80 p-2 rounded-full border border-slate-800 transition"
@@ -832,7 +995,6 @@ export default function Home() {
               </svg>
             </button>
 
-            {/* Imagem Expandida */}
             <img
               src={imagemExpandida.url}
               alt={imagemExpandida.titulo}
@@ -859,7 +1021,7 @@ export default function Home() {
 
             <h5 className="text-slate-300 font-semibold text-[11px] pt-2">Divulgação de desempenho hipotético</h5>
             <p>
-              Os resultados de desempenho hipotéticos têm muitas limitações inerentes, algumas das quais são descritas abaixo. nenhuma representação está sendo feita de que qualquer conta terá ou provavelmente obterá lucros ou perdas semelhantes aos mostrados; na verdade, frequentemente existem diferenças acentuadas entre os resultados de desempenho hipotéticos e os resultados reais subsequentemente alcançados por qualquer programa de negociação específico. Uma das limitações dos resultados de desempenho hipotéticos é que eles geralmente são preparados com o benefício da retrospectiva. Além disso, a negociação hipotética não envolve risco financeiro e nenhum registro de negociação hipotética pode explicar completamente o impacto do risco financial da negociação real. por exemplo, a capacidade de suportar perdas ou de aderir a um determinado programa de negociação, apesar das perdas comerciais, são pontos materiais que também podem afetar adversamente os resultados comerciais reais. Existem inúmeros outros fatores relacionados aos mercados em geral ou à implementação de qualquer programa de negociação específico que não pode ser totalmente contabilizado na preparação de resultados de desempenho hipotéticos e todos podem afetar adversamente os resultados de negociação.
+              Os resultados de desempenho hipotéticos têm muitas limitações inerentes, algumas das quais são descritas abaixo. nenhuma representação está sendo feita de que qualquer conta terá ou provavelmente obterá lucros ou perdas semelhantes aos mostrados; na verdade, frequentemente existem diferenças acentuadas entre os resultados de desempenho hipotéticos e os resultados reais subsequentemente alcançados por qualquer programa de negociação específico.
             </p>
 
             <h5 className="text-slate-300 font-semibold text-[11px] pt-2">Divulgação de depoimentos</h5>
@@ -867,14 +1029,14 @@ export default function Home() {
               Divulgação de depoimentos: Os depoimentos que aparecem neste site são de nossos clientes mas não são uma garantia de desempenho ou sucesso futuro.
             </p>
 
-            <h5 className="text-slate-300 font-semibold text-[11px] pt-2">Risck Disclosure</h5>
+            <h5 className="text-slate-300 font-semibold text-[11px] pt-2">Risk Disclosure</h5>
             <p>
               Futures and forex trading contains substantial risk and is not for every investor. An investor could potentially lose all or more than the initial investment. Risk capital is money that can be lost without jeopardizing ones’ financial security or lifestyle. Only risk capital should be used for trading and only those with sufficient risk capital should consider trading. Past performance is not necessarily indicative of future results.
             </p>
 
             <h5 className="text-slate-300 font-semibold text-[11px] pt-2">Hypothetical Risk Disclosure</h5>
             <p>
-              Hypothetical performance results have many inherent limitations, some of which are described below. No representation is being made that any account will or is likely to achieve profits or losses similar to those shown; in fact, there are frequently sharp differences between hypothetical performance results and the actual results subsequently achieved by any particular trading program. One of the limitations of hypothetical performance results is that they are generally prepared with the benefit of hindsight. In addition, hypothetical trading does not involve financial risk, and no hypothetical trading record can completely account for the impact of financial risk of actual trading. for example, the ability to withstand losses or to adhere to a particular trading program in spite of trading losses are material points which can also adversely affect actual trading results. There are numerous other factors related to the markets in general or to the implementation of any specific trading program which cannot be fully accounted for in the preparation of hypothetical performance results and all which can adversely affect trading results.
+              Hypothetical performance results have many inherent limitations, some of which are described below. No representation is being made that any account will or is likely to achieve profits or losses similar to those shown; in fact, there are frequently sharp differences between hypothetical performance results and the actual results subsequently achieved by any particular trading program.
             </p>
           </div>
 
@@ -887,15 +1049,13 @@ export default function Home() {
   );
 }
 
-function CardCampanha({ campanha, onExpandirImagem }: { campanha: Campanha; onExpandirImagem: (url: string, titulo: string) => void }) {
-  // Mapeia imagem e link considerando os nomes exatos do seu Supabase
+function CardCampanha({ campanha, onExpandirImagem, t }: { campanha: Campanha; onExpandirImagem: (url: string, titulo: string) => void; t: any }) {
   const urlImagem = campanha.imagem_url || campanha.imagem || campanha.banner;
   const urlLink = extrairUrlLimpa(campanha.link_direcionamento || campanha.link);
 
   return (
     <div className="bg-slate-900/80 border border-slate-800 hover:border-slate-700/80 rounded-2xl overflow-hidden flex flex-col justify-between transition-all duration-200 hover:shadow-xl hover:shadow-emerald-500/5 group">
       <div>
-        {/* Banner com a proporção original da imagem (sem cortar) */}
         <div className="w-full relative bg-slate-950 border-b border-slate-800 flex items-center justify-center overflow-hidden">
           <CampanhaImage 
             src={urlImagem} 
@@ -933,7 +1093,7 @@ function CardCampanha({ campanha, onExpandirImagem }: { campanha: Campanha; onEx
           rel="noopener noreferrer"
           className="block text-center w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3 rounded-xl text-xs transition shadow-lg shadow-emerald-500/10"
         >
-          Saiba Mais / Acessar
+          {t.saibaMais}
         </a>
       </div>
     </div>
@@ -968,7 +1128,7 @@ function CampanhaImage({ src, alt, onExpandir }: { src?: string; alt: string; on
   );
 }
 
-function CardMesa({ mesa, copiado, onCopiar }: { mesa: MesaProprietaria; copiado: string | null; onCopiar: (c: string, id: string) => void }) {
+function CardMesa({ mesa, copiado, onCopiar, t }: { mesa: MesaProprietaria; copiado: string | null; onCopiar: (c: string, id: string) => void; t: any }) {
   return (
     <div className="bg-slate-900/80 border border-slate-800 hover:border-slate-700/80 rounded-2xl p-6 flex flex-col justify-between transition-all duration-200 hover:shadow-xl hover:shadow-emerald-500/5 group">
       <div>
@@ -1002,7 +1162,7 @@ function CardMesa({ mesa, copiado, onCopiar }: { mesa: MesaProprietaria; copiado
       <div className="space-y-3 pt-2">
         <div className="flex items-center justify-between bg-slate-950 border border-dashed border-slate-800 rounded-xl p-2.5">
           <div className="pl-2">
-            <span className="text-[10px] text-slate-500 block uppercase font-medium">Cupom de Desconto</span>
+            <span className="text-[10px] text-slate-500 block uppercase font-medium">{t.cupomDesconto}</span>
             <span className="font-mono font-bold text-emerald-400 tracking-wider text-sm">{mesa.cupom}</span>
           </div>
           <button
@@ -1010,7 +1170,7 @@ function CardMesa({ mesa, copiado, onCopiar }: { mesa: MesaProprietaria; copiado
             disabled={mesa.cupom.toLowerCase().includes('sem cupom')}
             className="bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-xs text-slate-200 font-semibold px-3.5 py-2 rounded-lg transition"
           >
-            {copiado === mesa.id ? '✓ Copiado!' : mesa.cupom.toLowerCase().includes('sem cupom') ? 'Sem Cupom' : 'Copiar'}
+            {copiado === mesa.id ? t.copiado : mesa.cupom.toLowerCase().includes('sem cupom') ? t.semCupom : t.copiar}
           </button>
         </div>
 
@@ -1020,7 +1180,7 @@ function CardMesa({ mesa, copiado, onCopiar }: { mesa: MesaProprietaria; copiado
           rel="noopener noreferrer"
           className="block text-center w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold py-3 rounded-xl text-sm transition shadow-lg shadow-emerald-500/10"
         >
-          Aproveitar Oferta
+          {t.aproveitarOferta}
         </a>
       </div>
     </div>

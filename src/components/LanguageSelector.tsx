@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 export type Language = 'pt' | 'en' | 'es';
 
@@ -33,7 +33,7 @@ const FlagES = () => (
   </svg>
 );
 
-const languages: { code: Language; label: string; FlagComponent: () => JSX.Element }[] = [
+const languages: { code: Language; label: string; FlagComponent: () => React.ReactNode }[] = [
   { code: 'pt', label: 'PT', FlagComponent: FlagBR },
   { code: 'en', label: 'ENGLISH', FlagComponent: FlagUS },
   { code: 'es', label: 'ESPAÑOL', FlagComponent: FlagES },
