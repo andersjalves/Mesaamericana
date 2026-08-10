@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation';
 export default function LoginPage() {
   const router = useRouter();
   const [isLogin, setIsLogin] = useState(true);
+  const [nome, setNome] = useState('');
+  const [telefone, setTelefone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,11 +27,21 @@ export default function LoginPage() {
         router.push('/dashboard');
       }
     } else {
-      const { error } = await supabase.auth.signUp({ email, password });
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            nome,
+            telefone,
+          },
+        },
+      });
       if (error) {
         setMensagem({ tipo: 'erro', texto: error.message });
       } else {
-        setMensagem({ tipo: 'sucesso', texto: 'Cadastro realizado! Verifique seu e-mail para confirmar a conta.' });
+        setMensagem({ tipo: 'sucesso', texto: 'Cadastro realizado com sucesso!' });
+        router.push('/dashboard');
       }
     }
     setLoading(false);
@@ -60,7 +72,7 @@ export default function LoginPage() {
               {isLogin ? 'Acessar Área do Trader' : 'Criar Conta Gratuita'}
             </h1>
             <p className="text-xs text-slate-400 mt-1">
-              Acesse cupons exclusivos, materiais de apoio e simuladores de risco.
+              Acesse cupons exclusivos e materiais de apoio.
             </p>
           </div>
 
@@ -77,6 +89,34 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={handleAuth} className="space-y-4">
+            {!isLogin && (
+              <>
+                <div>
+                  <label className="text-xs text-slate-400 block mb-1 font-medium">Nome</label>
+                  <input
+                    type="text"
+                    required
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 transition"
+                    placeholder="Seu nome completo"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-400 block mb-1 font-medium">Telefone</label>
+                  <input
+                    type="tel"
+                    required
+                    value={telefone}
+                    onChange={(e) => setTelefone(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 transition"
+                    placeholder="(11) 91234-5678"
+                  />
+                </div>
+              </>
+            )}
+
             <div>
               <label className="text-xs text-slate-400 block mb-1 font-medium">E-mail</label>
               <input
@@ -110,13 +150,13 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 text-center border-t border-slate-800/80 pt-4">
+          <div className="mt-6 text-center border-t border-slate-800/80 pt-5">
             <button
               onClick={() => {
                 setIsLogin(!isLogin);
                 setMensagem(null);
               }}
-              className="text-xs text-slate-400 hover:text-emerald-400 transition"
+              className="text-sm font-bold text-emerald-400 hover:text-emerald-300 underline underline-offset-4 decoration-emerald-500/40 hover:decoration-emerald-300 transition"
             >
               {isLogin ? 'Ainda não tem conta? Cadastre-se' : 'Já possui uma conta? Faça Login'}
             </button>

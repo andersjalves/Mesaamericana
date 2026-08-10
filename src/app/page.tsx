@@ -5,6 +5,36 @@ import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { LOGOS_PLATAFORMAS } from '@/data/mesas';
 
+// Bandeiras em SVG para compatibilidade universal (sem dependência de fontes do SO)
+function FlagBR() {
+  return (
+    <svg className="w-5 h-3.5 rounded-sm object-cover shrink-0" viewBox="0 0 640 480">
+      <path fill="#009b3a" d="M0 0h640v480H0z"/>
+      <path fill="#fedf00" d="M320 40L600 240 320 440 40 240z"/>
+      <circle fill="#002776" cx="320" cy="240" r="105"/>
+    </svg>
+  );
+}
+
+function FlagUS() {
+  return (
+    <svg className="w-5 h-3.5 rounded-sm object-cover shrink-0" viewBox="0 0 640 480">
+      <path fill="#bd3d44" d="M0 0h640v480H0z"/>
+      <path stroke="#fff" strokeWidth="37" d="M0 55.5h640M0 129.5h640M0 203.5h640M0 277.5h640M0 351.5h640M0 425.5h640"/>
+      <path fill="#192f5d" d="M0 0h256v259H0z"/>
+    </svg>
+  );
+}
+
+function FlagES() {
+  return (
+    <svg className="w-5 h-3.5 rounded-sm object-cover shrink-0" viewBox="0 0 640 480">
+      <path fill="#c60b1e" d="M0 0h640v480H0z"/>
+      <path fill="#ffc400" d="M0 120h640v240H0z"/>
+    </svg>
+  );
+}
+
 export interface MesaProprietaria {
   id: string;
   nome: string;
@@ -46,12 +76,23 @@ const TRANSLATIONS = {
     navComparativo: 'Comparativo',
     navNoticias: 'Notícias & Calendário',
     navConteudo: 'Vídeos & Instagram',
+    navIndicadores: 'Indicadores Grátis',
     areaTrader: 'Área do Trader',
     grupoTelegram: 'Grupo Telegram',
-    badgeHero: 'Cupons & Regras Atualizadas',
-    tituloHero: 'As Melhores Ofertas em',
-    subtituloHero: 'Mesas Proprietárias Americana de Futuros',
-    descHero: 'Compare plataformas, regras de drawdown e economize na compra de suas avaliações com cupons verificados.',
+    heroBadge: '⚡ Tenha acesso a vários indicadores gratuitos! Cadastre-se Grátis ⚡',
+    heroTituloLinha1: 'Baixe o Seu Pack 100% Gratuito de',
+    heroTituloDestaque: 'Indicadores para NinjaTrader 8',
+    heroDescricao: 'Indicadores desenvolvidos especialmente para traders que usam NinjaTrader 8 e buscam ferramentas profissionais de análise gráfica, estudo de fluxo de ordens (order flow) e pesquisa de mercado.',
+    heroCadastroTexto: 'Cadastre-se para acessar e baixar instantaneamente direto na sua',
+    heroIndicador1: 'FootPrint',
+    heroIndicador2: 'FVG (Fair Value Gap)',
+    heroIndicador3: 'Oscilador Premium',
+    heroBonusLabel: 'Bônus inclusos:',
+    heroBonusTexto: 'Vários Indicadores Gratuitos',
+    heroBtnCadastro: '👉 CADASTRE-SE GRÁTIS E BAIXE AGORA',
+    heroJaTemConta: 'Já tem uma conta?',
+    heroFacaLogin: 'Faça login aqui',
+    heroParaAcessar: 'para acessar seus downloads.',
     placeholderBusca: 'Pesquisar mesa, cupom, plataforma ou drawdown...',
     tituloCampanhas: 'Campanhas & Eventos Especiais',
     descCampanhas: 'Acompanhe os principais lançamentos, pass-throughs e promoções por tempo limitado.',
@@ -81,7 +122,21 @@ const TRANSLATIONS = {
     btnInstagram: 'Ver perfil no Instagram',
     tituloParcerias: 'Integração Avançada NinjaTrader & Kinetick',
     descParcerias: 'As principais mesas proprietárias americanas utilizam a tecnologia da plataforma NinjaTrader para execução de ordens e o feed de dados Kinetick para cotações em tempo real sem atrasos.',
+    ecosistemaOficial: 'Eco-sistema Oficial de Dados',
+    plataformaRecomendada: 'Plataforma Recomendada',
+    dadosTempoReal: 'Dados de Mercado em Tempo Real',
     assistenteIa: 'Dúvidas de Mesas? Assistente IA',
+    assistenteTitulo: 'Assistente de Mesas Americanas',
+    assistenteMsgInicial: 'Olá! Sou o Assistente IA especializado em Mesas Proprietárias Americanas. Como posso te ajudar hoje? Selecione uma dúvida abaixo ou digite sua pergunta.',
+    perguntaCupomApex: 'Qual cupom usar na Apex?',
+    perguntaDrawdown: 'Como funciona o Drawdown Trailing vs EOD?',
+    perguntaPayout: 'Como funcionam os saques e payouts?',
+    respostaPadrao: 'Posso te ajudar com regras de avaliação, escolha de plataformas (NinjaTrader, Tradovate, Rithmic, BlackArrow) e cupons ativos. Qual mesa você quer analisar?',
+    respostaApex: 'A Apex Trader Funding é uma das maiores mesas dos EUA. Oferece até 90% de desconto com o cupom ANDMP. Possui drawdown do tipo Trailing (em tempo real) e repasse de 100% dos primeiros $25.000 de lucro. Funciona via NinjaTrader e Tradovate.',
+    respostaDrawdown: 'Existem 3 tipos principais de Drawdown:\n1. Trailing: Sobe junto com o lucro em tempo real (ex: Apex, Bulenox).\n2. EOD (End of Day): Atualizado apenas ao final do dia operacional (ex: Tradeify, MFF).\n3. Estático: O limite não sobe à medida que você lucra, ficando fixo.',
+    respostaCupom: 'Cupons ativos no momento:\n• Apex Trader Funding: ANDMP\n• My Funded Futures: AND5\n• Earn2Trade: ANDER\n• Tradeify & LVL: ANDMP',
+    respostaPayout: 'A maioria das mesas permite saques quinzenais ou mensais. Mesas como Apex e MFF repassam 100% dos primeiros lucros ($12.500 a $25.000) e depois mantêm o repasse em 90%.',
+    respostaPlataforma: 'Para operadoras brasileiras via BlackArrow, recomendamos LVL Funding e Ylos. Se preferir NinjaTrader ou Tradovate no navegador/celular, Apex e My Funded Futures são excelentes opções.',
     duvidasCupom: '🏷️ Cupons Apex',
     duvidasDrawdown: '📊 Drawdowns',
     duvidasPayout: '💰 Payout & Saques',
@@ -101,12 +156,23 @@ const TRANSLATIONS = {
     navComparativo: 'Comparison',
     navNoticias: 'News & Calendar',
     navConteudo: 'Videos & Instagram',
+    navIndicadores: 'Free Indicators',
     areaTrader: 'Trader Area',
     grupoTelegram: 'Telegram Group',
-    badgeHero: 'Updated Coupons & Rules',
-    tituloHero: 'The Best Offers in',
-    subtituloHero: 'US Futures Prop Firms',
-    descHero: 'Compare platforms, drawdown rules, and save on evaluation accounts with verified coupons.',
+    heroBadge: '⚡ Get access to several free indicators! Sign up for Free ⚡',
+    heroTituloLinha1: 'Download Your 100% Free Pack of',
+    heroTituloDestaque: 'Indicators for NinjaTrader 8',
+    heroDescricao: 'Indicators built specifically for traders using NinjaTrader 8 who want professional-grade charting tools, order flow analysis, and market research.',
+    heroCadastroTexto: 'Sign up to access and instantly download straight to your',
+    heroIndicador1: 'FootPrint',
+    heroIndicador2: 'FVG (Fair Value Gap)',
+    heroIndicador3: 'Premium Oscillator',
+    heroBonusLabel: 'Bonuses included:',
+    heroBonusTexto: 'Several Free Indicators',
+    heroBtnCadastro: '👉 SIGN UP FREE & DOWNLOAD NOW',
+    heroJaTemConta: 'Already have an account?',
+    heroFacaLogin: 'Log in here',
+    heroParaAcessar: 'to access your downloads.',
     placeholderBusca: 'Search prop firm, coupon, platform or drawdown...',
     tituloCampanhas: 'Campaigns & Special Events',
     descCampanhas: 'Track major launches, pass-throughs, and limited-time promotions.',
@@ -136,7 +202,21 @@ const TRANSLATIONS = {
     btnInstagram: 'View Instagram Profile',
     tituloParcerias: 'Advanced NinjaTrader & Kinetick Integration',
     descParcerias: 'Leading US prop firms rely on NinjaTrader technology for order execution and Kinetick data feed for real-time market data.',
+    ecosistemaOficial: 'Official Data Ecosystem',
+    plataformaRecomendada: 'Recommended Platform',
+    dadosTempoReal: 'Real-Time Market Data',
     assistenteIa: 'Prop Firm Questions? AI Assistant',
+    assistenteTitulo: 'US Prop Firms Assistant',
+    assistenteMsgInicial: 'Hi! I\'m the AI Assistant specialized in US Proprietary Trading Firms. How can I help you today? Pick a question below or type your own.',
+    perguntaCupomApex: 'Which coupon should I use on Apex?',
+    perguntaDrawdown: 'How does Trailing vs EOD drawdown work?',
+    perguntaPayout: 'How do withdrawals and payouts work?',
+    respostaPadrao: 'I can help with evaluation rules, platform choice (NinjaTrader, Tradovate, Rithmic, BlackArrow), and active coupons. Which firm do you want to analyze?',
+    respostaApex: 'Apex Trader Funding is one of the largest prop firms in the US. It offers up to 90% off with the coupon ANDMP. It has a Trailing drawdown (real-time) and a 100% profit split on the first $25,000 in profit. It runs on NinjaTrader and Tradovate.',
+    respostaDrawdown: 'There are 3 main types of Drawdown:\n1. Trailing: Rises with your profit in real time (e.g. Apex, Bulenox).\n2. EOD (End of Day): Only updated at the close of the trading day (e.g. Tradeify, MFF).\n3. Static: The limit stays fixed and doesn\'t rise as you profit.',
+    respostaCupom: 'Active coupons right now:\n• Apex Trader Funding: ANDMP\n• My Funded Futures: AND5\n• Earn2Trade: ANDER\n• Tradeify & LVL: ANDMP',
+    respostaPayout: 'Most firms allow bi-weekly or monthly withdrawals. Firms like Apex and MFF pay out 100% of the first profits ($12,500 to $25,000) and then keep the split at 90%.',
+    respostaPlataforma: 'For Brazilian operators via BlackArrow, we recommend LVL Funding and Ylos. If you prefer NinjaTrader or Tradovate on browser/mobile, Apex and My Funded Futures are excellent choices.',
     duvidasCupom: '🏷️ Apex Coupons',
     duvidasDrawdown: '📊 Drawdowns',
     duvidasPayout: '💰 Payout & Withdrawals',
@@ -156,12 +236,23 @@ const TRANSLATIONS = {
     navComparativo: 'Comparativa',
     navNoticias: 'Noticias y Calendario',
     navConteudo: 'Videos e Instagram',
+    navIndicadores: 'Indicadores Gratis',
     areaTrader: 'Área del Trader',
     grupoTelegram: 'Grupo de Telegram',
-    badgeHero: 'Cupones y Reglas Actualizadas',
-    tituloHero: 'Las Mejores Ofertas en',
-    subtituloHero: 'Empresas de Fondeo Americanas de Futuros',
-    descHero: 'Compara plataformas, reglas de drawdown y ahorra en tus evaluaciones con cupones verificados.',
+    heroBadge: '⚡ ¡Accede a varios indicadores gratis! Regístrate Gratis ⚡',
+    heroTituloLinha1: 'Descarga Tu Pack 100% Gratuito de',
+    heroTituloDestaque: 'Indicadores para NinjaTrader 8',
+    heroDescricao: 'Indicadores desarrollados especialmente para traders que usan NinjaTrader 8 y buscan herramientas profesionales de análisis gráfico, estudio de order flow y research de mercado.',
+    heroCadastroTexto: 'Regístrate para acceder y descargar al instante directo en tu',
+    heroIndicador1: 'FootPrint',
+    heroIndicador2: 'FVG (Fair Value Gap)',
+    heroIndicador3: 'Oscilador Premium',
+    heroBonusLabel: 'Bonos incluidos:',
+    heroBonusTexto: 'Varios Indicadores Gratuitos',
+    heroBtnCadastro: '👉 REGÍSTRATE GRATIS Y DESCARGA AHORA',
+    heroJaTemConta: '¿Ya tienes una cuenta?',
+    heroFacaLogin: 'Inicia sesión aquí',
+    heroParaAcessar: 'para acceder a tus descargas.',
     placeholderBusca: 'Buscar empresa, cupón, plataforma o drawdown...',
     tituloCampanhas: 'Campañas y Eventos Especiales',
     descCampanhas: 'Sigue los principales lanzamientos, promociones y ofertas por tiempo limitado.',
@@ -191,7 +282,21 @@ const TRANSLATIONS = {
     btnInstagram: 'Ver Perfil en Instagram',
     tituloParcerias: 'Integración Avanzada NinjaTrader y Kinetick',
     descParcerias: 'Las principales empresas de fondeo americanas utilizan la tecnología de NinjaTrader para la ejecución de órdenes y el feed de datos Kinetick para cotizaciones en tiempo real.',
+    ecosistemaOficial: 'Ecosistema Oficial de Datos',
+    plataformaRecomendada: 'Plataforma Recomendada',
+    dadosTempoReal: 'Datos de Mercado en Tiempo Real',
     assistenteIa: '¿Dudas de Fondeo? Asistente IA',
+    assistenteTitulo: 'Asistente de Empresas de Fondeo',
+    assistenteMsgInicial: '¡Hola! Soy el Asistente IA especializado en Empresas de Fondeo Americanas. ¿Cómo puedo ayudarte hoy? Elige una duda abajo o escribe tu pregunta.',
+    perguntaCupomApex: '¿Qué cupón usar en Apex?',
+    perguntaDrawdown: '¿Cómo funciona el Drawdown Trailing vs EOD?',
+    perguntaPayout: '¿Cómo funcionan los retiros y payouts?',
+    respostaPadrao: 'Puedo ayudarte con reglas de evaluación, elección de plataformas (NinjaTrader, Tradovate, Rithmic, BlackArrow) y cupones activos. ¿Qué empresa quieres analizar?',
+    respostaApex: 'Apex Trader Funding es una de las mayores empresas de fondeo de EE. UU. Ofrece hasta 90% de descuento con el cupón ANDMP. Tiene drawdown tipo Trailing (en tiempo real) y reparto del 100% de las primeras ganancias de $25.000. Funciona con NinjaTrader y Tradovate.',
+    respostaDrawdown: 'Existen 3 tipos principales de Drawdown:\n1. Trailing: Sube junto con la ganancia en tiempo real (ej: Apex, Bulenox).\n2. EOD (End of Day): Se actualiza solo al final del día operativo (ej: Tradeify, MFF).\n3. Estático: El límite no sube a medida que ganas, queda fijo.',
+    respostaCupom: 'Cupones activos ahora mismo:\n• Apex Trader Funding: ANDMP\n• My Funded Futures: AND5\n• Earn2Trade: ANDER\n• Tradeify & LVL: ANDMP',
+    respostaPayout: 'La mayoría de las empresas permiten retiros quincenales o mensuales. Empresas como Apex y MFF reparten el 100% de las primeras ganancias ($12.500 a $25.000) y luego mantienen el reparto en 90%.',
+    respostaPlataforma: 'Para operadores brasileños vía BlackArrow, recomendamos LVL Funding y Ylos. Si prefieres NinjaTrader o Tradovate en navegador/móvil, Apex y My Funded Futures son excelentes opciones.',
     duvidasCupom: '🏷️ Cupones Apex',
     duvidasDrawdown: '📊 Drawdowns',
     duvidasPayout: '💰 Payout y Retiros',
@@ -261,6 +366,14 @@ export default function Home() {
   // Estado do Idioma
   const [idioma, setIdioma] = useState<'PT' | 'EN' | 'ES'>('PT');
   const t = TRANSLATIONS[idioma];
+  const [idiomaAberto, setIdiomaAberto] = useState(false);
+  const idiomaRef = useRef<HTMLDivElement>(null);
+
+  const OPCOES_IDIOMA: { codigo: 'PT' | 'EN' | 'ES'; Bandeira: () => React.JSX.Element; label: string }[] = [
+    { codigo: 'PT', Bandeira: FlagBR, label: 'Português' },
+    { codigo: 'EN', Bandeira: FlagUS, label: 'English' },
+    { codigo: 'ES', Bandeira: FlagES, label: 'Español' },
+  ];
 
   // Estado do Modal Lightbox
   const [imagemExpandida, setImagemExpandida] = useState<{ url: string; titulo: string } | null>(null);
@@ -273,12 +386,23 @@ export default function Home() {
   const [mensagens, setMensagens] = useState<Array<{ autor: 'user' | 'ia'; texto: string }>>([
     {
       autor: 'ia',
-      texto: 'Olá! Sou o Assistente IA especializado em Mesas Proprietárias Americanas. Como posso te ajudar hoje? Selecione uma dúvida abaixo ou digite sua pergunta.'
+      texto: t.assistenteMsgInicial
     }
   ]);
   const [inputChat, setInputChat] = useState('');
   const [enviandoIa, setEnviandoIa] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement>(null);
+
+  // Fecha o dropdown de idioma ao clicar fora dele
+  useEffect(() => {
+    function handleClickFora(event: MouseEvent) {
+      if (idiomaRef.current && !idiomaRef.current.contains(event.target as Node)) {
+        setIdiomaAberto(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickFora);
+    return () => document.removeEventListener('mousedown', handleClickFora);
+  }, []);
 
   useEffect(() => {
     async function buscarDados() {
@@ -356,18 +480,32 @@ export default function Home() {
     setEnviandoIa(true);
 
     const text = msgUsuario.toLowerCase();
-    let resposta = "Posso te ajudar com regras de avaliação, escolha de plataformas (NinjaTrader, Tradovate, Rithmic, BlackArrow) e cupons ativos. Qual mesa você quer analisar?";
+    let resposta = t.respostaPadrao;
 
     if (text.includes('apex')) {
-      resposta = "A Apex Trader Funding é uma das maiores mesas dos EUA. Oferece até 90% de desconto com o cupom ANDMP. Possui drawdown do tipo Trailing (em tempo real) e repasse de 100% dos primeiros $25.000 de lucro. Funciona via NinjaTrader e Tradovate.";
-    } else if (text.includes('drawdown') || text.includes('perda') || text.includes('limite')) {
-      resposta = "Existem 3 tipos principais de Drawdown:\n1. Trailing: Sobe junto com o lucro em tempo real (ex: Apex, Bulenox).\n2. EOD (End of Day): Atualizado apenas ao final do dia operacional (ex: Tradeify, MFF).\n3. Estático: O limite não sobe à medida que você lucra, ficando fixo.";
-    } else if (text.includes('cupom') || text.includes('desconto') || text.includes('codigo')) {
-      resposta = "Cupons ativos no momento:\n• Apex Trader Funding: ANDMP\n• My Funded Futures: AND5\n• Earn2Trade: ANDER\n• Tradeify & LVL: ANDMP";
-    } else if (text.includes('payout') || text.includes('saque') || text.includes('receber')) {
-      resposta = "A maioria das mesas permite saques quinzenais ou mensais. Mesas como Apex e MFF repassam 100% dos primeiros lucros ($12.500 a $25.000) e depois mantêm o repasse em 90%.";
-    } else if (text.includes('plataforma') || text.includes('ninja') || text.includes('blackarrow')) {
-      resposta = "Para operadoras brasileiras via BlackArrow, recomendamos LVL Funding e Ylos. Se preferir NinjaTrader ou Tradovate no navegador/celular, Apex e My Funded Futures são excelentes opções.";
+      resposta = t.respostaApex;
+    } else if (
+      text.includes('drawdown') || text.includes('perda') || text.includes('limite') ||
+      text.includes('loss') || text.includes('limit') || text.includes('perdida') || text.includes('límite')
+    ) {
+      resposta = t.respostaDrawdown;
+    } else if (
+      text.includes('cupom') || text.includes('desconto') || text.includes('codigo') ||
+      text.includes('coupon') || text.includes('discount') || text.includes('code') ||
+      text.includes('cupón') || text.includes('descuento') || text.includes('código')
+    ) {
+      resposta = t.respostaCupom;
+    } else if (
+      text.includes('payout') || text.includes('saque') || text.includes('receber') ||
+      text.includes('withdrawal') || text.includes('receive') ||
+      text.includes('retiro') || text.includes('recibir')
+    ) {
+      resposta = t.respostaPayout;
+    } else if (
+      text.includes('plataforma') || text.includes('ninja') || text.includes('blackarrow') ||
+      text.includes('platform')
+    ) {
+      resposta = t.respostaPlataforma;
     }
 
     setTimeout(() => {
@@ -391,6 +529,7 @@ export default function Home() {
           </div>
 
           <nav className="hidden md:flex items-center space-x-8 text-sm font-medium text-slate-400">
+            <a href="#indicadores" className="hover:text-emerald-400 transition">{t.navIndicadores}</a>
             <a href="#campanhas" className="hover:text-emerald-400 transition">{t.navCampanhas}</a>
             <a href="#promocoes" className="hover:text-emerald-400 transition">{t.navPromocoes}</a>
             <a href="#parcerias" className="hover:text-emerald-400 transition">{t.navParcerias}</a>
@@ -400,34 +539,53 @@ export default function Home() {
           </nav>
 
           <div className="flex items-center gap-3">
-            {/* SELETOR DE IDIOMA DA ÁREA NÃO LOGADA */}
-            <div className="relative inline-flex items-center bg-slate-900 border border-slate-800 rounded-xl p-1 text-xs">
+            {/* SELETOR DE IDIOMA DA ÁREA NÃO LOGADA (DROPDOWN) */}
+            <div className="relative" ref={idiomaRef}>
               <button
-                onClick={() => setIdioma('PT')}
-                className={`px-2 py-1 rounded-lg font-bold transition ${idioma === 'PT' ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'}`}
-                title="Português"
+                onClick={() => setIdiomaAberto((v) => !v)}
+                className="h-10 flex items-center gap-1.5 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl px-3 text-xs font-bold text-slate-200 transition"
               >
-                🇧🇷 PT
+                {(() => {
+                  const BandeiraAtual = OPCOES_IDIOMA.find((o) => o.codigo === idioma)?.Bandeira;
+                  return BandeiraAtual ? <BandeiraAtual /> : null;
+                })()}
+                <span>{idioma}</span>
+                <svg
+                  className={`w-3 h-3 text-slate-500 transition-transform ${idiomaAberto ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
               </button>
-              <button
-                onClick={() => setIdioma('EN')}
-                className={`px-2 py-1 rounded-lg font-bold transition ${idioma === 'EN' ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'}`}
-                title="English"
-              >
-                🇺🇸 EN
-              </button>
-              <button
-                onClick={() => setIdioma('ES')}
-                className={`px-2 py-1 rounded-lg font-bold transition ${idioma === 'ES' ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'}`}
-                title="Español"
-              >
-                🇪🇸 ES
-              </button>
+
+              {idiomaAberto && (
+                <div className="absolute right-0 mt-2 w-40 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl overflow-hidden z-50">
+                  {OPCOES_IDIOMA.map((opcao) => (
+                    <button
+                      key={opcao.codigo}
+                      onClick={() => {
+                        setIdioma(opcao.codigo);
+                        setIdiomaAberto(false);
+                      }}
+                      className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-semibold text-left transition ${
+                        idioma === opcao.codigo
+                          ? 'bg-emerald-500/10 text-emerald-400'
+                          : 'text-slate-300 hover:bg-slate-800'
+                      }`}
+                    >
+                      <opcao.Bandeira />
+                      <span>{opcao.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <a
               href="/login"
-              className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3.5 py-2 rounded-xl font-bold text-xs sm:text-sm transition"
+              className="h-10 flex items-center justify-center whitespace-nowrap bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3.5 sm:px-4 rounded-xl font-bold text-xs sm:text-sm transition"
             >
               {t.areaTrader}
             </a>
@@ -436,9 +594,9 @@ export default function Home() {
               href="https://t.me/MesasAmericana"
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition flex items-center gap-2 shadow-lg shadow-emerald-500/10"
+              className="h-10 flex items-center justify-center whitespace-nowrap bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3.5 sm:px-4 rounded-xl font-bold text-xs sm:text-sm transition gap-2 shadow-lg shadow-emerald-500/10"
             >
-              <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
                 <path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm5.56 8.16l-2.02 9.52c-.15.68-.55.85-1.12.53l-3.08-2.27-1.48 1.43c-.16.16-.3.3-.62.3l.22-3.14 5.72-5.17c.25-.22-.05-.34-.38-.12l-7.07 4.45-3.04-.95c-.66-.21-.67-.66.14-.98l11.89-4.58c.55-.2 1.03.13.84.98z"/>
               </svg>
               <span className="hidden sm:inline">{t.grupoTelegram}</span>
@@ -448,24 +606,76 @@ export default function Home() {
         </div>
       </header>
 
-      {/* HERO SECTION */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-8 text-center">
-        <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full text-xs font-semibold uppercase tracking-wider mb-4">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          {t.badgeHero}
+      {/* HERO SECTION / BANNER HAMERAL EM DESTAQUE */}
+      <section id="indicadores" className="max-w-6xl mx-auto px-4 sm:px-6 pt-10 pb-6 text-center">
+        {/* HAMERAL STYLE CONTAINER */}
+        <div className="relative border-2 border-purple-600/80 bg-gradient-to-b from-[#0F0A1E] via-[#0B0F17] to-[#0D0B18] rounded-3xl p-6 sm:p-12 shadow-[0_0_50px_rgba(147,51,234,0.25)]">
+          
+          {/* BADGE PISCANTE CHAMATIVO */}
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 rounded-full text-xs sm:text-sm font-black uppercase tracking-wider mb-6 animate-pulse shadow-lg shadow-emerald-500/20">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+            {t.heroBadge}
+          </div>
+
+          {/* TÍTULO PRINCIPAL */}
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight mb-4 leading-tight text-white">
+            {t.heroTituloLinha1} <br className="hidden sm:block" />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-rose-400">
+              {t.heroTituloDestaque}
+            </span>
+          </h1>
+
+          <p className="text-slate-300 max-w-3xl mx-auto text-sm sm:text-base mb-8 leading-relaxed">
+            {t.heroDescricao}
+          </p>
+
+          {/* CAIXA DE LISTA DE INDICADORES (HAMERAL STYLE) */}
+          <div className="max-w-3xl mx-auto bg-purple-950/20 border border-purple-500/30 rounded-2xl p-6 mb-8 backdrop-blur-md">
+            <p className="text-xs sm:text-sm font-medium text-slate-300 mb-4">
+              {t.heroCadastroTexto} <strong className="text-purple-300 font-bold">{t.areaTrader}</strong>:
+            </p>
+
+            {/* CHECKBOXES DOS INDICADORES */}
+            <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs sm:text-sm font-bold text-slate-100">
+              <div className="flex items-center gap-2 bg-purple-900/40 px-3.5 py-2 rounded-xl border border-purple-500/30 shadow-sm">
+                <span className="w-4 h-4 rounded bg-purple-600 text-white flex items-center justify-center text-[10px] font-black">✓</span>
+                <span>{t.heroIndicador1}</span>
+              </div>
+
+              <div className="flex items-center gap-2 bg-purple-900/40 px-3.5 py-2 rounded-xl border border-purple-500/30 shadow-sm">
+                <span className="w-4 h-4 rounded bg-purple-600 text-white flex items-center justify-center text-[10px] font-black">✓</span>
+                <span>{t.heroIndicador2}</span>
+              </div>
+
+              <div className="flex items-center gap-2 bg-purple-900/40 px-3.5 py-2 rounded-xl border border-purple-500/30 shadow-sm">
+                <span className="w-4 h-4 rounded bg-purple-600 text-white flex items-center justify-center text-[10px] font-black">✓</span>
+                <span>{t.heroIndicador3}</span>
+              </div>
+            </div>
+
+            {/* BÔNUS EXTRAS */}
+            <div className="mt-5 pt-4 border-t border-purple-800/40 text-xs font-semibold text-purple-300">
+              🎁 <strong className="text-white">{t.heroBonusLabel}</strong> {t.heroBonusTexto}
+            </div>
+          </div>
+
+          {/* BOTÃO SIGN IN / CADASTRO ÁREA LOGADA */}
+          <div className="max-w-md mx-auto space-y-3">
+            <a
+              href="/login"
+              className="block w-full bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 hover:from-purple-500 hover:to-rose-500 text-white font-black py-4 px-8 rounded-2xl text-base sm:text-lg shadow-xl shadow-purple-600/30 hover:scale-105 transition duration-200 transform uppercase tracking-wider"
+            >
+              <span className="animate-pulse">{t.heroBtnCadastro}</span>
+            </a>
+            <p className="text-[11px] text-slate-400">
+              {t.heroJaTemConta} <a href="/login" className="text-purple-400 hover:underline font-bold">{t.heroFacaLogin}</a> {t.heroParaAcessar}
+            </p>
+          </div>
+
         </div>
-        <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight mb-4 leading-tight">
-          {t.tituloHero} <br className="hidden sm:block" />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400">
-            {t.subtituloHero}
-          </span>
-        </h1>
-        <p className="text-slate-400 max-w-2xl mx-auto text-sm sm:text-base mb-6 leading-relaxed">
-          {t.descHero}
-        </p>
 
         {/* BARRA DE PESQUISA */}
-        <div className="max-w-lg mx-auto relative">
+        <div className="max-w-lg mx-auto relative mt-10">
           <input
             type="text"
             placeholder={t.placeholderBusca}
@@ -848,7 +1058,7 @@ export default function Home() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="space-y-2 text-center md:text-left">
               <span className="text-[10px] font-bold text-emerald-400 tracking-wider uppercase bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-md">
-                Eco-sistema Oficial de Dados
+                {t.ecosistemaOficial}
               </span>
               <h3 className="text-lg font-bold text-slate-100">
                 {t.tituloParcerias}
@@ -867,7 +1077,7 @@ export default function Home() {
                 <img src="https://ninjatrader.com/favicon.ico" alt="NinjaTrader Logo" className="w-6 h-6 object-contain" />
                 <div className="text-left">
                   <span className="text-xs font-bold block text-slate-100">NinjaTrader</span>
-                  <span className="text-[10px] text-slate-500">Plataforma Recomendada</span>
+                  <span className="text-[10px] text-slate-500">{t.plataformaRecomendada}</span>
                 </div>
               </a>
               <a
@@ -881,7 +1091,7 @@ export default function Home() {
                 </div>
                 <div className="text-left">
                   <span className="text-xs font-bold block text-slate-100">Kinetick Data</span>
-                  <span className="text-[10px] text-slate-500">Real-Time Market Data</span>
+                  <span className="text-[10px] text-slate-500">{t.dadosTempoReal}</span>
                 </div>
               </a>
             </div>
@@ -904,7 +1114,7 @@ export default function Home() {
             <div className="bg-slate-950 p-3.5 border-b border-slate-800 flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span className="text-xs font-bold text-slate-100">Assistente de Mesas Americanas</span>
+                <span className="text-xs font-bold text-slate-100">{t.assistenteTitulo}</span>
               </div>
               <button
                 onClick={() => setChatAberto(false)}
@@ -916,19 +1126,19 @@ export default function Home() {
 
             <div className="p-2 bg-slate-950/60 border-b border-slate-800/80 flex gap-1.5 overflow-x-auto text-[10px]">
               <button
-                onClick={() => processarPergunta('Qual cupom usar na Apex?')}
+                onClick={() => processarPergunta(t.perguntaCupomApex)}
                 className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2 py-1 rounded-lg whitespace-nowrap border border-slate-700/50"
               >
                 {t.duvidasCupom}
               </button>
               <button
-                onClick={() => processarPergunta('Como funciona o Drawdown Trailing vs EOD?')}
+                onClick={() => processarPergunta(t.perguntaDrawdown)}
                 className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2 py-1 rounded-lg whitespace-nowrap border border-slate-700/50"
               >
                 {t.duvidasDrawdown}
               </button>
               <button
-                onClick={() => processarPergunta('Como funcionam os saques e payouts?')}
+                onClick={() => processarPergunta(t.perguntaPayout)}
                 className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2 py-1 rounded-lg whitespace-nowrap border border-slate-700/50"
               >
                 {t.duvidasPayout}
