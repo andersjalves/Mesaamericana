@@ -49,6 +49,11 @@ export interface MesaProprietaria {
   cor_tag: string;
   plataformas: string[];
   ordem?: number;
+  trustpilot_nota?: string;
+  trustpilot_avaliacoes?: string;
+  promocao_descricao?: string;
+  trustpilot_url?: string;
+  trustpilot_slug?: string;
 }
 
 export interface Campanha {
@@ -66,6 +71,46 @@ export interface Campanha {
   data_fim?: string;
   criado_em?: string;
 }
+
+const TRUSTPILOT_PROFILES: Record<string, { url: string; fallbackNota: string; fallbackAvaliacoes: string }> = {
+  lucidtrading: {
+    url: 'https://www.trustpilot.com/review/lucidtrading.com',
+    fallbackNota: '4.5',
+    fallbackAvaliacoes: '5,343',
+  },
+  ylostrading: {
+    url: 'https://www.trustpilot.com/review/ylostrading.com',
+    fallbackNota: '4.8',
+    fallbackAvaliacoes: '517',
+  },
+  apextraderfunding: {
+    url: 'https://www.trustpilot.com/review/apextraderfunding.com',
+    fallbackNota: '4.2',
+    fallbackAvaliacoes: '20,612',
+  },
+};
+
+const LUCID_TRADING: MesaProprietaria = {
+  id: 'lucidtrading',
+  nome: 'Lucid Trading',
+  logo: 'https://lucidtrading.com/favicon.ico',
+  desconto: '40% OFF',
+  cupom: 'ANDMP',
+  link_afiliado: 'https://lucidtrading.com/ref/BolsaAmericana/',
+  destaque: false,
+  drawdown: 'EOD',
+  profit_split: '90/10',
+  avaliacao: 'Futures',
+  cor_tag: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+  plataformas: [],
+  ordem: 0,
+  trustpilot_nota: TRUSTPILOT_PROFILES.lucidtrading.fallbackNota,
+  trustpilot_avaliacoes: TRUSTPILOT_PROFILES.lucidtrading.fallbackAvaliacoes,
+  trustpilot_url: TRUSTPILOT_PROFILES.lucidtrading.url,
+  trustpilot_slug: 'lucidtrading',
+  promocao_descricao: 'EOD • 40% OFF • Cupom ANDMP',
+};
+
 
 // Dicionário de Traduções
 const TRANSLATIONS = {
@@ -427,6 +472,42 @@ export default function Home() {
       if (!errorCampanhas && dataCampanhas) {
         const campanhasValidas = dataCampanhas.filter((c: any) => c.ativo !== false && c.ativa !== false);
         setCampanhas(campanhasValidas as Campanha[]);
+      }
+
+      // Trustpilot: os dados são buscados automaticamente pela API interna,
+      // que consulta diretamente os perfis oficiais da Trustpilot.
+      try {
+        const respostaTrustpilot = await fetch('/api/trustpilot', { cache: 'no-store' });
+        if (respostaTrustpilot.ok) {
+          const dadosTrustpilot = await respostaTrustpilot.json();
+          const dadosBase = (dataMesas || []) as MesaProprietaria[];
+          const mesasComLucid = dadosBase.some((m) => m.id === LUCID_TRADING.id)
+            ? dadosBase
+            : [...dadosBase, LUCID_TRADING];
+
+          const mesasAtualizadas = mesasComLucid.map((mesa) => {
+            const slug = mesa.trustpilot_slug ||
+              (mesa.nome.toLowerCase().includes('lucid') ? 'lucidtrading' :
+               mesa.nome.toLowerCase().includes('ylos') ? 'ylostrading' :
+               mesa.nome.toLowerCase().includes('apex') ? 'apextraderfunding' : undefined);
+            const perfil = slug ? dadosTrustpilot[slug] : null;
+            return {
+              ...mesa,
+              trustpilot_slug: slug,
+              trustpilot_url: slug ? TRUSTPILOT_PROFILES[slug]?.url : mesa.trustpilot_url,
+              trustpilot_nota: perfil?.nota ? String(perfil.nota) : mesa.trustpilot_nota,
+              trustpilot_avaliacoes: perfil?.avaliacoes ? String(perfil.avaliacoes) : mesa.trustpilot_avaliacoes,
+            };
+          });
+
+          setMesas(mesasAtualizadas);
+        } else if (dataMesas) {
+          const mesasBase = (dataMesas as MesaProprietaria[]);
+          setMesas(mesasBase.some((m) => m.id === LUCID_TRADING.id) ? mesasBase : [...mesasBase, LUCID_TRADING]);
+        }
+      } catch {
+        const mesasBase = (dataMesas || []) as MesaProprietaria[];
+        setMesas(mesasBase.some((m) => m.id === LUCID_TRADING.id) ? mesasBase : [...mesasBase, LUCID_TRADING]);
       }
 
       setCarregando(false);
@@ -1338,11 +1419,34 @@ function CampanhaImage({ src, alt, onExpandir }: { src?: string; alt: string; on
   );
 }
 
+function TrustpilotStars({ nota }: { nota: number }) {
+  const notaLimitada = Math.max(0, Math.min(5, nota));
+  return (
+    <div className="flex items-center gap-[1px]" aria-label={`Trustpilot ${notaLimitada.toFixed(1)} de 5`}>
+      {Array.from({ length: 5 }).map((_, i) => {
+        const preenchimento = Math.max(0, Math.min(1, notaLimitada - i)) * 100;
+        return (
+          <span key={i} className="relative w-3 h-3 inline-block">
+            <svg viewBox="0 0 24 24" className="absolute inset-0 w-3 h-3" fill="#3f4655">
+              <path d="M12 1l3.09 6.26L22 8.27l-5 4.87 1.18 6.88L12 16.9l-6.18 3.12L7 13.14 2 8.27l6.91-1.01L12 1z" />
+            </svg>
+            <span className="absolute inset-y-0 left-0 overflow-hidden" style={{ width: `${preenchimento}%` }}>
+              <svg viewBox="0 0 24 24" className="w-3 h-3" fill="#00b67a">
+                <path d="M12 1l3.09 6.26L22 8.27l-5 4.87 1.18 6.88L12 16.9l-6.18 3.12L7 13.14 2 8.27l6.91-1.01L12 1z" />
+              </svg>
+            </span>
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 function CardMesa({ mesa, copiado, onCopiar, t }: { mesa: MesaProprietaria; copiado: string | null; onCopiar: (c: string, id: string) => void; t: any }) {
   return (
     <div className="bg-slate-900/80 border border-slate-800 hover:border-slate-700/80 rounded-2xl p-6 flex flex-col justify-between transition-all duration-200 hover:shadow-xl hover:shadow-emerald-500/5 group">
       <div>
-        <div className="flex justify-between items-start mb-4">
+        <div className="flex justify-between items-start mb-3">
           <div className="flex items-center gap-3">
             <LogoImage src={mesa.logo} alt={mesa.nome} className="w-12 h-12 rounded-xl bg-slate-950 p-2 border border-slate-800/80 group-hover:border-slate-700" />
             <div>
@@ -1350,6 +1454,26 @@ function CardMesa({ mesa, copiado, onCopiar, t }: { mesa: MesaProprietaria; copi
               <span className={`inline-block text-[10px] px-2 py-0.5 rounded border mt-1 font-semibold ${mesa.cor_tag}`}>
                 {mesa.avaliacao}
               </span>
+              {mesa.trustpilot_nota && (
+                <div className="flex items-center gap-1.5 mt-1.5">
+                  <TrustpilotStars nota={parseFloat(mesa.trustpilot_nota)} />
+                  <span className="text-[10px] font-bold text-slate-300">{mesa.trustpilot_nota}</span>
+                  {mesa.trustpilot_avaliacoes && (
+                    <span className="text-[9px] text-slate-500">({mesa.trustpilot_avaliacoes})</span>
+                  )}
+                </div>
+              )}
+              {mesa.trustpilot_url && (
+                <a
+                  href={mesa.trustpilot_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 mt-1 text-[9px] font-semibold text-[#00b67a] hover:underline"
+                  title="Ver avaliações no Trustpilot"
+                >
+                  Trustpilot ↗
+                </a>
+              )}
             </div>
           </div>
           <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-extrabold text-xs px-2.5 py-1 rounded-lg">
@@ -1357,7 +1481,7 @@ function CardMesa({ mesa, copiado, onCopiar, t }: { mesa: MesaProprietaria; copi
           </span>
         </div>
 
-        <div className="space-y-2 text-xs text-slate-400 my-5 bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/60">
+        <div className="space-y-2 text-xs text-slate-400 my-3 bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/60">
           <div className="flex justify-between items-center">
             <span className="text-slate-500">Drawdown:</span>
             <span className="text-slate-200 font-semibold">{mesa.drawdown}</span>
@@ -1367,9 +1491,15 @@ function CardMesa({ mesa, copiado, onCopiar, t }: { mesa: MesaProprietaria; copi
             <span className="text-slate-200 font-semibold">{mesa.profit_split}</span>
           </div>
         </div>
+
+        {mesa.promocao_descricao && (
+          <p className="text-[11px] leading-snug text-slate-400 mb-3 line-clamp-2">
+            {mesa.promocao_descricao}
+          </p>
+        )}
       </div>
 
-      <div className="space-y-3 pt-2">
+      <div className="space-y-4 pt-2">
         <div className="flex items-center justify-between bg-slate-950 border border-dashed border-slate-800 rounded-xl p-2.5">
           <div className="pl-2">
             <span className="text-[10px] text-slate-500 block uppercase font-medium">{t.cupomDesconto}</span>
@@ -1388,7 +1518,7 @@ function CardMesa({ mesa, copiado, onCopiar, t }: { mesa: MesaProprietaria; copi
           href={mesa.link_afiliado}
           target="_blank"
           rel="noopener noreferrer"
-          className="block text-center w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold py-3 rounded-xl text-sm transition shadow-lg shadow-emerald-500/10"
+          className="block text-center w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold py-2.5 rounded-xl text-sm transition shadow-lg shadow-emerald-500/10"
         >
           {t.aproveitarOferta}
         </a>
