@@ -23,6 +23,7 @@ interface Indicator {
   description: string;
   isRestricted: boolean;
   downloadUrl?: string;
+  hasAccess?: boolean;
 }
 
 // Dicionário de Traduções para o Dashboard
@@ -194,7 +195,15 @@ export default function DashboardPage() {
         setPropFirms([]);
       }
 
-      // 2. Busca na tabela 'indicators' do Supabase
+      // 2. Busca permissões do usuário em 'user_indicators'
+      const { data: permissions } = await supabase
+        .from('user_indicators')
+        .select('indicator_id')
+        .eq('user_id', currentUser.id);
+
+      const allowedIds = new Set(permissions?.map((p: any) => p.indicator_id) || []);
+
+      // 3. Busca na tabela 'indicators' do Supabase
       const { data: rawIndicators, error: errorInd } = await supabase
         .from('indicators')
         .select('*')
@@ -206,7 +215,8 @@ export default function DashboardPage() {
           title: ind.title,
           description: ind.description,
           isRestricted: ind.is_restricted,
-          downloadUrl: ind.download_url
+          downloadUrl: ind.download_url,
+          hasAccess: !ind.is_restricted || allowedIds.has(ind.id)
         }));
 
         setFreeIndicators(formattedInds.filter(i => !i.isRestricted));
@@ -537,12 +547,23 @@ export default function DashboardPage() {
                     </div>
 
                     <div className="shrink-0">
-                      <button
-                        disabled
-                        className="bg-purple-950/80 text-purple-300 border border-purple-700/50 text-xs font-bold px-3.5 py-2 rounded-xl cursor-not-allowed"
-                      >
-                        {t.restIndBtn}
-                      </button>
+                      {ind.hasAccess ? (
+                        <a
+                          href={ind.downloadUrl || '#'}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black px-4 py-2 rounded-xl transition shadow-md shadow-emerald-500/10 inline-block"
+                        >
+                          {t.downloadDll}
+                        </a>
+                      ) : (
+                        <button
+                          disabled
+                          className="bg-purple-950/80 text-purple-300 border border-purple-700/50 text-xs font-bold px-3.5 py-2 rounded-xl cursor-not-allowed"
+                        >
+                          {t.restIndBtn}
+                        </button>
+                      )}
                     </div>
 
                     {/* POPUP/TOOLTIP POSICIONADO PARA BAIXO PARA EVITAR CORTES */}
