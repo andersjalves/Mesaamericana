@@ -505,11 +505,42 @@ export default function DashboardPage() {
 
         {/* SEÇÃO: INDICADORES RESTRITOS */}
         <section className="bg-slate-900/80 border border-purple-500/20 p-6 rounded-2xl space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <span className="text-xl">🔒</span>
               <h2 className="text-base font-bold text-purple-400">{t.restIndTitle}</h2>
+              <div className="relative group">
+                <a
+                  href="https://ninjatraderdomesticvendor.sjv.io/4G4WBn"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 text-xs font-bold px-3 py-1 rounded-lg transition inline-block"
+                >
+                  Liberar Acesso
+                </a>
+                <div className="absolute left-0 top-full mt-2 hidden group-hover:block z-50 w-72 p-3 bg-slate-900 text-slate-200 text-xs rounded-xl border border-purple-500/40 shadow-2xl backdrop-blur-md">
+                  Para acessar de forma GRATUITA, crie sua conta de usuario na Ninjatrader com o nosso link:{' '}
+                  <a
+                    href="https://ninjatraderdomesticvendor.sjv.io/4G4WBn"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-purple-400 underline font-bold hover:text-purple-300 block mt-1 break-all"
+                  >
+                    https://ninjatraderdomesticvendor.sjv.io/4G4WBn
+                  </a>
+                </div>
+              </div>
             </div>
+
+            <a
+              href="https://t.me/SuporteMesaAmericana_bot"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-400 hover:text-sky-300 text-xs font-bold px-3 py-1.5 rounded-xl shadow-md transition flex items-center gap-1.5"
+            >
+              <span>✈️</span>
+              <span>Suporte Telegram</span>
+            </a>
           </div>
 
           {restrictedIndicators.length === 0 ? (
@@ -531,8 +562,16 @@ export default function DashboardPage() {
                 >
                   {t.restIndBtn}
                 </button>
-                <div className="absolute top-full mt-2 right-0 sm:right-auto sm:left-1/2 sm:-translate-x-1/2 hidden group-hover:block w-48 bg-slate-950 text-slate-200 text-[11px] text-center font-medium py-1.5 px-3 rounded-lg border border-purple-500/40 shadow-xl z-50 whitespace-nowrap">
-                  {t.restIndTooltip}
+                <div className="absolute top-full mt-2 right-0 sm:right-auto sm:left-1/2 sm:-translate-x-1/2 hidden group-hover:block w-72 bg-slate-950 text-slate-200 text-[11px] text-center font-medium p-3 rounded-xl border border-purple-500/40 shadow-xl z-50">
+                  Para acessar de forma GRATUITA, crie sua conta de usuario na Ninjatrader com o nosso link:{' '}
+                  <a
+                    href="https://ninjatraderdomesticvendor.sjv.io/4G4WBn"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-purple-400 underline font-bold hover:text-purple-300 block mt-1"
+                  >
+                    https://ninjatraderdomesticvendor.sjv.io/4G4WBn
+                  </a>
                 </div>
               </div>
             </div>
@@ -546,7 +585,7 @@ export default function DashboardPage() {
                       <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-2">{ind.description}</p>
                     </div>
 
-                    <div className="shrink-0">
+                    <div className="shrink-0 relative group/btn">
                       {ind.hasAccess ? (
                         <a
                           href={ind.downloadUrl || '#'}
@@ -557,18 +596,33 @@ export default function DashboardPage() {
                           {t.downloadDll}
                         </a>
                       ) : (
-                        <button
-                          disabled
-                          className="bg-purple-950/80 text-purple-300 border border-purple-700/50 text-xs font-bold px-3.5 py-2 rounded-xl cursor-not-allowed"
-                        >
-                          {t.restIndBtn}
-                        </button>
+                        <>
+                          <button
+                            disabled
+                            className="bg-purple-950/80 text-purple-300 border border-purple-700/50 text-xs font-bold px-3.5 py-2 rounded-xl cursor-not-allowed"
+                          >
+                            {t.restIndBtn}
+                          </button>
+                          
+                          {/* TOOLTIP NO HOVER DO BOTÃO ACESSO RESTRITO */}
+                          <div className="absolute right-0 top-full mt-2 hidden group-hover/btn:block z-50 w-72 p-3 bg-slate-900 text-slate-200 text-xs rounded-xl border border-purple-500/40 shadow-2xl backdrop-blur-md">
+                            Para acessar de forma GRATUITA, crie sua conta de usuario na Ninjatrader com o nosso link:{' '}
+                            <a
+                              href="https://ninjatraderdomesticvendor.sjv.io/4G4WBn"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-purple-400 underline font-bold hover:text-purple-300 block mt-1 break-all"
+                            >
+                              https://ninjatraderdomesticvendor.sjv.io/4G4WBn
+                            </a>
+                          </div>
+                        </>
                       )}
                     </div>
 
                     {/* POPUP/TOOLTIP POSICIONADO PARA BAIXO PARA EVITAR CORTES */}
                     {ind.description && (
-                      <div className="absolute left-0 top-full mt-2 hidden group-hover:block z-50 w-full max-w-sm p-3.5 bg-slate-900 text-slate-200 text-xs rounded-xl border border-purple-500/40 shadow-2xl backdrop-blur-md pointer-events-none">
+                      <div className="absolute left-0 top-full mt-2 hidden group-hover:block group-hover/btn:hidden z-40 w-full max-w-sm p-3.5 bg-slate-900 text-slate-200 text-xs rounded-xl border border-purple-500/40 shadow-2xl backdrop-blur-md pointer-events-none">
                         <p className="font-bold text-purple-400 mb-1">{ind.title}</p>
                         <p className="leading-relaxed text-slate-300">{ind.description}</p>
                       </div>
